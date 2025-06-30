@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration app="BACKEND" formatVersion="14" lastSavedWith="Configurator Backend" lastSavedWithVersion="3.50.0" toolsPackage="ModusToolbox 3.5.0" xmlns="http://cypress.com/xsd/cydesignfile_v5">
+    <Devices>
+        <Device mpn="XMC1302-T038x0200">
+            <BlockConfig>
+                <Personality template="xmc_ccu4_global" version="1.0">
+                    <Block location="ccu4[0]" locked="true"/>
+                    <Parameters>
+                        <Param id="mc_shadow_tx_function" value="XMC_CCU4_SLICE_MCMS_ACTION_TRANSFER_PR_CR"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_ccu4" version="2.0">
+                    <Block location="ccu4[0].ch[0]" locked="true">
+                        <Aliases>
+                            <Alias value="Timer"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="automatic_shadow_transfer_request_on_compare_write" value="false"/>
+                        <Param id="automatic_shadow_transfer_request_on_dither_write" value="false"/>
+                        <Param id="automatic_shadow_transfer_request_on_period_write" value="false"/>
+                        <Param id="automatic_shadow_transfer_request_on_prescaler_write" value="false"/>
+                        <Param id="automatic_shadow_transfer_request_on_psl_write" value="false"/>
+                        <Param id="capture0_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="capture1_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="compare_counting_mode" value="XMC_CCU4_SLICE_TIMER_COUNT_MODE_EA"/>
+                        <Param id="compare_down_event_sr" value="0"/>
+                        <Param id="compare_up_match_event_sr" value="0"/>
+                        <Param id="count_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="direction_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="dither_compare_value" value="0"/>
+                        <Param id="dither_mode" value="XMC_CCU4_DITHER_DISABLED"/>
+                        <Param id="enable_cascade_shadow_transfer" value="false"/>
+                        <Param id="enable_compare_down_event" value="false"/>
+                        <Param id="enable_compare_immediate_update" value="false"/>
+                        <Param id="enable_compare_up_event" value="false"/>
+                        <Param id="enable_dither_immediate_update" value="false"/>
+                        <Param id="enable_extended_capture_mode" value="false"/>
+                        <Param id="enable_external_event0" value="false"/>
+                        <Param id="enable_external_event1" value="false"/>
+                        <Param id="enable_external_event2" value="false"/>
+                        <Param id="enable_mcss_input" value="false"/>
+                        <Param id="enable_modulation_sync_with_pwm" value="false"/>
+                        <Param id="enable_multichannel_control" value="false"/>
+                        <Param id="enable_one_match_event" value="false"/>
+                        <Param id="enable_period_immediate_update" value="false"/>
+                        <Param id="enable_period_match_event" value="true"/>
+                        <Param id="enable_prescaler_immediate_update" value="false"/>
+                        <Param id="enable_psl_immediate_update" value="false"/>
+                        <Param id="enable_same_capture_event" value="false"/>
+                        <Param id="enable_shadow_transfer_on_clear" value="false"/>
+                        <Param id="enable_timer_concatenation" value="false"/>
+                        <Param id="enable_trap_during_initialization" value="false"/>
+                        <Param id="event0_edge_selection" value="XMC_CCU4_SLICE_EVENT_EDGE_SENSITIVITY_RISING_EDGE"/>
+                        <Param id="event0_level_selection" value="XMC_CCU4_SLICE_EVENT_LEVEL_SENSITIVITY_ACTIVE_HIGH"/>
+                        <Param id="event0_lpf_configuration" value="XMC_CCU4_SLICE_EVENT_FILTER_DISABLED"/>
+                        <Param id="event0_sw_trigger" value="false"/>
+                        <Param id="event1_edge_selection" value="XMC_CCU4_SLICE_EVENT_EDGE_SENSITIVITY_NONE"/>
+                        <Param id="event1_level_selection" value="XMC_CCU4_SLICE_EVENT_LEVEL_SENSITIVITY_ACTIVE_HIGH"/>
+                        <Param id="event1_lpf_configuration" value="XMC_CCU4_SLICE_EVENT_FILTER_DISABLED"/>
+                        <Param id="event1_sw_trigger" value="false"/>
+                        <Param id="event2_edge_selection" value="XMC_CCU4_SLICE_EVENT_EDGE_SENSITIVITY_NONE"/>
+                        <Param id="event2_level_selection" value="XMC_CCU4_SLICE_EVENT_LEVEL_SENSITIVITY_ACTIVE_HIGH"/>
+                        <Param id="event2_lpf_configuration" value="XMC_CCU4_SLICE_EVENT_FILTER_DISABLED"/>
+                        <Param id="event2_sw_trigger" value="false"/>
+                        <Param id="exit_trap_state_mode" value="XMC_CCU4_SLICE_TRAP_EXIT_MODE_AUTOMATIC"/>
+                        <Param id="external_event0_sr" value="0"/>
+                        <Param id="external_event1_sr" value="0"/>
+                        <Param id="external_event2_sr" value="0"/>
+                        <Param id="floating_prescaler_maximum" value="32768"/>
+                        <Param id="gate_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="ignore_full_flag_rules" value="false"/>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="init_start" value="false"/>
+                        <Param id="load_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="max_count_value" value="65535"/>
+                        <Param id="modulation_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="modulation_function_mode" value="XMC_CCU4_SLICE_MODULATION_MODE_CLEAR_ST_OUT"/>
+                        <Param id="one_match_event_sr" value="0"/>
+                        <Param id="operation_mode" value="XMC_CCU4_SLICE_MODE_COMPARE"/>
+                        <Param id="output_passive_level" value="XMC_CCU4_SLICE_OUTPUT_PASSIVE_LEVEL_LOW"/>
+                        <Param id="override_trigger_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="override_value_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="period_match_event_sr" value="0"/>
+                        <Param id="prescaler_initial_value" value="64"/>
+                        <Param id="prescaler_mode" value="XMC_CCU4_SLICE_PRESCALER_MODE_NORMAL"/>
+                        <Param id="shadow_transfer_mode" value="XMC_CCU4_SLICE_SHADOW_TRANSFER_MODE_IN_PERIOD_MATCH_AND_ONE_MATCH"/>
+                        <Param id="single_shot_mode" value="false"/>
+                        <Param id="start_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="start_function_mode" value="XMC_CCU4_SLICE_START_MODE_TIMER_START"/>
+                        <Param id="stop_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                        <Param id="stop_function_mode" value="XMC_CCU4_SLICE_END_MODE_TIMER_STOP"/>
+                        <Param id="timer_clear_control" value="XMC_CCU4_SLICE_TIMER_CLEAR_MODE_NEVER"/>
+                        <Param id="timer_compare_value" value="0"/>
+                        <Param id="timer_initial_value" value="0"/>
+                        <Param id="timer_period_value" value="20000"/>
+                        <Param id="trap_function" value="XMC_CCU4_SLICE_EVENT_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[0]" locked="true">
+                        <Aliases>
+                            <Alias value="LED_PB2"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_HIGH"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[1]" locked="true">
+                        <Aliases>
+                            <Alias value="LED_PB3"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_HIGH"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[2]" locked="true">
+                        <Aliases>
+                            <Alias value="LED_PB4"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_HIGH"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[6]" locked="true">
+                        <Aliases>
+                            <Alias value="Bus_RX"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_PULL_UP"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[7]" locked="true">
+                        <Aliases>
+                            <Alias value="Bus_TX"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[8]" locked="true">
+                        <Aliases>
+                            <Alias value="Bus_Controle"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[9]" locked="true">
+                        <Aliases>
+                            <Alias value="PB4"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_PULL_UP"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[10]" locked="true">
+                        <Aliases>
+                            <Alias value="PB3"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_PULL_UP"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[11]" locked="true">
+                        <Aliases>
+                            <Alias value="PB2"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_PULL_UP"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[0].pin[12]" locked="true">
+                        <Aliases>
+                            <Alias value="PB1"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_PULL_UP"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[1].pin[0]" locked="true">
+                        <Aliases>
+                            <Alias value="LED_PB1"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_HIGH"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[1].pin[1]" locked="true">
+                        <Aliases>
+                            <Alias value="LED_ST"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_HIGH"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_pin" version="1.0">
+                    <Block location="ioss[0].port[1].pin[2]" locked="true"/>
+                    <Parameters>
+                        <Param id="inFlash" value="true"/>
+                        <Param id="input_hysteresis" value="XMC_GPIO_INPUT_HYSTERESIS_STANDARD"/>
+                        <Param id="input_mode" value="XMC_GPIO_MODE_INPUT_TRISTATE"/>
+                        <Param id="io_function" value="XMC_GPIO_INPUT_OUTPUT"/>
+                        <Param id="output_level" value="XMC_GPIO_OUTPUT_LEVEL_LOW"/>
+                        <Param id="output_mode" value="XMC_GPIO_MODE_OUTPUT_PUSH_PULL"/>
+                        <Param id="output_strength" value="XMC_GPIO_OUTPUT_STRENGTH_NONE"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc1_clocks" version="1.0">
+                    <Block location="scu[0].clock[0]" locked="true"/>
+                </Personality>
+                <Personality template="xmc1_pclk" version="1.0">
+                    <Block location="scu[0].clock[0].ccuclk[0]" locked="true"/>
+                    <Parameters>
+                        <Param id="pclk_src" value="XMC_SCU_CLOCK_PCLKSRC_DOUBLE_MCLK"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc1_dco1" version="1.0">
+                    <Block location="scu[0].clock[0].dco1[0]" locked="true"/>
+                    <Parameters>
+                        <Param id="accuracy" value="4"/>
+                        <Param id="calibration_enable" value="false"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc1_dco2" version="1.0">
+                    <Block location="scu[0].clock[0].dco2[0]" locked="true"/>
+                    <Parameters>
+                        <Param id="accuracy" value="4"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc1_fdivclk" version="1.0">
+                    <Block location="scu[0].clock[0].fdivclk[0]" locked="true"/>
+                    <Parameters>
+                        <Param id="configuration" value="auto"/>
+                        <Param id="dclk_src" value="XMC_SCU_CLOCK_DCLKSRC_DCO1"/>
+                        <Param id="fdiv_frequency" value="64.000"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc1_mclk" version="1.0">
+                    <Block location="scu[0].clock[0].periclk[0]" locked="true"/>
+                </Personality>
+                <Personality template="xmc1_rtcclk" version="1.0">
+                    <Block location="scu[0].clock[0].rtcclk[0]" locked="true"/>
+                    <Parameters>
+                        <Param id="rtc_src" value="XMC_SCU_CLOCK_RTCCLKSRC_DCO2"/>
+                    </Parameters>
+                </Personality>
+                <Personality template="xmc_uart" version="1.0">
+                    <Block location="usic[0].ch[1]" locked="true">
+                        <Aliases>
+                            <Alias value="UART1"/>
+                        </Aliases>
+                    </Block>
+                    <Parameters>
+                        <Param id="AlternativeInterrupt" value="false"/>
+                        <Param id="AlternativeInterruptSRSel" value="0"/>
+                        <Param id="BaudRate" value="9600"/>
+                        <Param id="BaudRateGeneratorClockSrc" value="XMC_USIC_CH_BRG_CLOCK_SOURCE_DIVIDER"/>
+                        <Param id="ClockDividerMode" value="XMC_USIC_CH_BRG_CLOCK_DIVIDER_MODE_FRACTIONAL"/>
+                        <Param id="CollisionDetectionEvent" value="false"/>
+                        <Param id="DataBits" value="8"/>
+                        <Param id="DataCollisionEnabled" value="false"/>
+                        <Param id="DataLostInterrupt" value="false"/>
+                        <Param id="ExternalClockEdge" value="XMC_USIC_CH_INPUT_COMBINATION_MODE_RISING_EDGE"/>
+                        <Param id="FormatErrorEvent" value="false"/>
+                        <Param id="FrameLength" value="8"/>
+                        <Param id="HwTransferGatingEnabled" value="false"/>
+                        <Param id="HwTransferGatingLogic" value="XMC_USIC_CH_START_TRANSMISION_ON_TDV_DX2S_0"/>
+                        <Param id="HwTransferTriggerEdge" value="XMC_USIC_CH_INPUT_COMBINATION_MODE_RISING_EDGE"/>
+                        <Param id="HwTransferTriggerEnabled" value="false"/>
+                        <Param id="Oversampling" value="16"/>
+                        <Param id="ParityMode" value="XMC_USIC_CH_PARITY_MODE_NONE"/>
+                        <Param id="ProtocolEventSRSel" value="0"/>
+                        <Param id="ReceiveBufferErrorEvent" value="false"/>
+                        <Param id="ReceiveBufferErrorEventSRSel" value="0"/>
+                        <Param id="ReceiverFrameFinishedEvent" value="false"/>
+                        <Param id="ReceiverInterrupt" value="true"/>
+                        <Param id="ReceiverInterruptSRSel" value="1"/>
+                        <Param id="ReceiverNoiseDetectionEvent" value="false"/>
+                        <Param id="ReceiverStartInterrupt" value="false"/>
+                        <Param id="RxFIFOLimit" value="31"/>
+                        <Param id="RxFIFOPointer" value="32"/>
+                        <Param id="RxFIFOSize" value="XMC_USIC_CH_FIFO_SIZE_32WORDS"/>
+                        <Param id="SamplePoint" value="8"/>
+                        <Param id="ShowSystemRelatedConnections" value="false"/>
+                        <Param id="StandardReceiveBufferEvent" value="true"/>
+                        <Param id="StandardReceiveBufferEventSRSel" value="1"/>
+                        <Param id="StandardTransmitBufferEvent" value="true"/>
+                        <Param id="StandardTransmitBufferEventSRSel" value="0"/>
+                        <Param id="StartAfterInit" value="true"/>
+                        <Param id="StopBits" value="1"/>
+                        <Param id="SynchronizationBreakDetectionEvent" value="false"/>
+                        <Param id="TimeMeasurementEnabled" value="false"/>
+                        <Param id="TransmitBufferErrorEvent" value="false"/>
+                        <Param id="TransmitBufferErrorEventSRSel" value="0"/>
+                        <Param id="TransmitBufferInterrupt" value="false"/>
+                        <Param id="TransmitBufferInterruptSRSel" value="0"/>
+                        <Param id="TransmitShiftInterrupt" value="false"/>
+                        <Param id="TransmitShiftInterruptSRSel" value="0"/>
+                        <Param id="TransmitterFrameFinishedEvent" value="false"/>
+                        <Param id="TxFIFOLimit" value="1"/>
+                        <Param id="TxFIFOPointer" value="0"/>
+                        <Param id="TxFIFOSize" value="XMC_USIC_CH_FIFO_SIZE_32WORDS"/>
+                        <Param id="configuration" value="auto"/>
+                        <Param id="inFlash" value="true"/>
+                    </Parameters>
+                </Personality>
+            </BlockConfig>
+            <Netlist>
+                <Net>
+                    <Port name="ioss[0].port[0].pin[6].digital_in[0]"/>
+                    <Port name="usic[0].ch[1].dx0[0]"/>
+                </Net>
+                <Net>
+                    <Port name="ioss[0].port[0].pin[7].digital_out[0]"/>
+                    <Port name="usic[0].ch[1].dout0[0]"/>
+                </Net>
+            </Netlist>
+        </Device>
+    </Devices>
+</Configuration>
