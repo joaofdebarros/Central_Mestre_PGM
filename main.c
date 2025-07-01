@@ -22,7 +22,7 @@ volatile bool recebendo = false;
 volatile bool pacote_completo = false;  
 volatile bool pacote_obsoleto = false;
 volatile bool enviando_pacote = false;
-volatile bool cadastrado = false;
+volatile bool cadastrado = true;
 
 //Variáveis do pacote
 #define start_byte 	0x7E
@@ -43,6 +43,7 @@ uint32_t sem_comunicação = 0;
 uint8_t Tempo_200ms = 10;
 uint16_t Tempo_3000ms = 1000;
 uint16_t Tempo_100ms = 100;
+uint32_t tentando_cadastrar = 100;
 uint8_t piscadas = 0;
 volatile uint32_t systick = 0;
 volatile uint32_t delay_tx = 0;
@@ -67,8 +68,8 @@ uint8_t blink2 = 0;
 uint8_t blink3 = 0;
 uint8_t blink4 = 0;
 volatile bool LD2 = 0;
-
-volatile bool cadastro[5] = {0,0,0,0,0};
+volatile bool led_cadastro = false;
+volatile bool PGM_cadastrado[5] = {0,0,0,0,0};
 
 typedef struct {
 	XMC_GPIO_PORT_t *port;
@@ -156,8 +157,9 @@ void USIC0_1_IRQHandler(void)
 			
 			if(PGM_count < 5 && !cadastrado)
 			{
+				led_cadastro = false;
 				cadastrado = true;
-				cadastro[PGM_count] = true;
+				PGM_cadastrado[PGM_count] = true;
 				modulos[PGM_count].numero = PGM_count;
 				modulos[PGM_count].UID0 = Rx_buffer[1];
 				modulos[PGM_count].UID1 = Rx_buffer[2];
@@ -395,7 +397,9 @@ void Controle()
 									LD3 = 5;
 									break;	
 					}	
-			 	}else{
+			 	}
+
+				if(PGM_cadastrado[1] || PGM_cadastrado[2] || PGM_cadastrado[3] || PGM_cadastrado[4]){
 					estado = STATUS;
 				}
 			}
@@ -480,6 +484,7 @@ void CCU40_0_IRQHandler()
 		}
 		
 		if(XMC_GPIO_GetInput(PB3_PORT, PB3_PIN) == 0){
+			led_cadastro = true;
 			cadastrado = false;
 		}
 			
@@ -575,11 +580,19 @@ void Controle_led(){
 		acionar_3000ms = false;
 	}
 	
-	if(!cadastrado)
+	if(led_cadastro)
 	{
-		if(acionar_100ms){
+		if(acionar_100ms)
+		{
+			tentando_cadastrar--;
 			XMC_GPIO_ToggleOutput(LED_ST_PORT, LED_ST_PIN);
 			acionar_100ms = false;
+		}
+		
+		if(tentando_cadastrar == 0)
+		{
+			led_cadastro = false;
+			tentando_cadastrar = 100;
 		}
 	}else{
 		XMC_GPIO_SetOutputLow(LED_ST_PORT, LED_ST_PIN);
@@ -594,7 +607,7 @@ void Controle_led(){
 	
 	if(sem_comunicação >= TIMEOUT_MAX)
 	{
-	    blink_led(4, 10);
+	    blink_led(2, 10);
 	}
 	
 }
