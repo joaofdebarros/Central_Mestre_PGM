@@ -464,7 +464,7 @@ void CCU40_0_IRQHandler()
     	XMC_CCU4_SLICE_ClearEvent(CCU40_CC40, XMC_CCU4_SLICE_IRQ_ID_PERIOD_MATCH);
 
 		if(XMC_GPIO_GetInput(PB1_PORT, PB1_PIN) == 0){
-			if(LD1 >= 6){
+			if(LD1 >= 5){
 				LD1 = 0;
 			}else{
 				LD1++;
