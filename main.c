@@ -302,7 +302,7 @@ void enviar_pacote_uart()
 				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
-				pacote[8] = 0x01;
+				pacote[8] = 0x03;
 				pacote[9] = pacote[0] ^ pacote[1] ^ pacote[2] ^ pacote[3] ^ pacote[4] ^ pacote[5] ^ pacote[6] ^ pacote[7] ^ pacote[8];
     			pacote[9] = ~pacote[9];
 				break;
@@ -315,7 +315,7 @@ void enviar_pacote_uart()
 				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
-				pacote[8] = 0x03;
+				pacote[8] = 0x07;
 				pacote[9] = pacote[0] ^ pacote[1] ^ pacote[2] ^ pacote[3] ^ pacote[4] ^ pacote[5] ^ pacote[6] ^ pacote[7] ^ pacote[8];
     			pacote[9] = ~pacote[9];
 				break;
@@ -328,7 +328,7 @@ void enviar_pacote_uart()
 				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
-				pacote[8] = 0x07;
+				pacote[8] = 0x0F;
 				pacote[9] = pacote[0] ^ pacote[1] ^ pacote[2] ^ pacote[3] ^ pacote[4] ^ pacote[5] ^ pacote[6] ^ pacote[7] ^ pacote[8];
     			pacote[9] = ~pacote[9];
 				break;
@@ -341,7 +341,7 @@ void enviar_pacote_uart()
 				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
-				pacote[8] = 0x0F;
+				pacote[8] = 0x1F;
 				pacote[9] = pacote[0] ^ pacote[1] ^ pacote[2] ^ pacote[3] ^ pacote[4] ^ pacote[5] ^ pacote[6] ^ pacote[7] ^ pacote[8];
     			pacote[9] = ~pacote[9];
 				break;
@@ -352,9 +352,9 @@ void enviar_pacote_uart()
 				pacote[3] = modulos[modulo_index].UID1;
 				pacote[4] = modulos[modulo_index].UID2;
 				pacote[5] = modulos[modulo_index].UID3;
-				pacote[6] = 'T';
+				pacote[6] = 'D';
 				pacote[7] = 0x01;
-				pacote[8] = 0x1F;
+				pacote[8] = 0x00;
 				pacote[9] = pacote[0] ^ pacote[1] ^ pacote[2] ^ pacote[3] ^ pacote[4] ^ pacote[5] ^ pacote[6] ^ pacote[7] ^ pacote[8];
     			pacote[9] = ~pacote[9];
 				break;
