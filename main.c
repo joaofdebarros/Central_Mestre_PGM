@@ -23,7 +23,7 @@ volatile bool pacote_completo = false;
 volatile bool pacote_obsoleto = false;
 volatile bool enviando_pacote = false;
 volatile bool cadastrado = true;
-
+volatile bool validated = true;
 //Variáveis do pacote
 #define start_byte 	0x7E
 uint8_t UID0 = 0;
@@ -104,7 +104,7 @@ PGM_t modulos[5] = {
 };
 
 //Máquina de estados
-uint8_t estado = 0;
+uint8_t estado = 2;
 
 //Rotina para receber dados
 void USIC0_1_IRQHandler(void)
@@ -150,6 +150,7 @@ void USIC0_1_IRQHandler(void)
 			{
 				if(Rx_buffer[1] == modulos[i].UID0 && Rx_buffer[2] == modulos[i].UID1 && Rx_buffer[3] == modulos[i].UID2 && Rx_buffer[4] == modulos[i].UID3)
 				{
+					validated = true;
 					cadastrado = true;
 					break;
 				}
@@ -316,18 +317,78 @@ void enviar_pacote_uart()
 //Máquina de estados
 void Controle()
 {
-	#define CADASTRO	0
-	#define STATUS		1
-	#define RECEIVE		2
+	#define RECEIVE		0
+	#define CADASTRO	1
+	#define STATUS		2
 	#define TRANSMIT	3
 	#define DELAY_ENVIO	4
 	#define LIMPAR		5
 	
 	switch (estado) 
 	{
+		case RECEIVE:
+		{
+			pacote_completo = false;
+			XMC_GPIO_SetOutputHigh(Bus_Controle_PORT, Bus_Controle_PIN);
+			
+			if(!cadastrado)
+			{
+				validated = false;
+				estado = CADASTRO;
+			}else if(cadastrado && !validated){
+				
+				Buffer_TX[0] = start_byte;
+				Buffer_TX[1] = TAMANHO_BUFFER;
+				Buffer_TX[2] = modulos[b4].UID0;
+				Buffer_TX[3] = modulos[b4].UID1;
+				Buffer_TX[4] = modulos[b4].UID2;
+				Buffer_TX[5] = modulos[b4].UID3;
+				Buffer_TX[6] = 'A';
+				Buffer_TX[7] = 0x01;
+				Buffer_TX[8] = (PGM_count - 1);
+				Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
+		    	Buffer_TX[10] = stop_byte;
+			    	
+			    estado = TRANSMIT;
+			}else if(cadastrado && validated){
+				if(get_status){
+				
+					get_status = false;
+					
+					switch (Rx_buffer[7]) 
+					{
+						case 0x00:	
+									LD3 = 0;
+									break;				
+						case 0x01:	
+									LD3 = 1;
+									break;		
+						case 0x03:	
+									LD3 = 2;
+									break;		
+						case 0x07:	
+									LD3 = 3;
+									break;	
+						case 0x0F:	
+									LD3 = 4;
+									break;			
+						case 0x1F:	
+									LD3 = 5;
+									break;	
+					}	
+			 	}
+
+				if(PGM_cadastrado[1] || PGM_cadastrado[2] || PGM_cadastrado[3] || PGM_cadastrado[4]){
+					estado = STATUS;
+				}
+			}else{
+				estado = RECEIVE;
+			}
+			
+		}break;
+		
 		case CADASTRO:
 		{
-			
 			Buffer_TX[0] = start_byte;
 			Buffer_TX[1] = TAMANHO_BUFFER;
 			Buffer_TX[2] = 0x00;
@@ -360,51 +421,6 @@ void Controle()
 			Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
 		    Buffer_TX[10] = stop_byte;
 		    estado = TRANSMIT;
-			
-		}break;
-		
-		case RECEIVE:
-		{
-			pacote_completo = false;
-			XMC_GPIO_SetOutputHigh(Bus_Controle_PORT, Bus_Controle_PIN);
-			
-			if(!cadastrado)
-			{
-				estado = CADASTRO;
-			}else{
-				if(get_status){
-				
-					get_status = false;
-					
-					switch (Rx_buffer[7]) 
-					{
-						case 0x00:	
-									LD3 = 0;
-									break;				
-						case 0x01:	
-									LD3 = 1;
-									break;		
-						case 0x03:	
-									LD3 = 2;
-									break;		
-						case 0x07:	
-									LD3 = 3;
-									break;	
-						case 0x0F:	
-									LD3 = 4;
-									break;			
-						case 0x1F:	
-									LD3 = 5;
-									break;	
-					}	
-			 	}
-
-				if(PGM_cadastrado[1] || PGM_cadastrado[2] || PGM_cadastrado[3] || PGM_cadastrado[4]){
-					estado = STATUS;
-				}
-			}
-			
-			
 			
 		}break;
 		
@@ -486,6 +502,7 @@ void CCU40_0_IRQHandler()
 		if(XMC_GPIO_GetInput(PB3_PORT, PB3_PIN) == 0){
 			led_cadastro = true;
 			cadastrado = false;
+
 		}
 			
 		if(XMC_GPIO_GetInput(PB2_PORT, PB2_PIN) == 0){
@@ -591,6 +608,8 @@ void Controle_led(){
 		
 		if(tentando_cadastrar == 0)
 		{
+			validated = true;
+			cadastrado = true;
 			led_cadastro = false;
 			tentando_cadastrar = 100;
 		}
