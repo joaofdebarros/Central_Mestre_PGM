@@ -10,6 +10,9 @@
 #include <stdint.h>
 #include <xmc_device.h>
 #include <xmc_scu.h>
+#include <xmc_flash.h>
+
+#define FLASH_SECTOR_ADDR 0x10010000 //Endereço de setor livre
 
 #define TAMANHO_BUFFER 11
 //Buffer de envio e recepção de dados
@@ -21,9 +24,8 @@ uint8_t Buffer_TX[TAMANHO_BUFFER] = {0};
 volatile bool recebendo = false;
 volatile bool pacote_completo = false;  
 volatile bool pacote_obsoleto = false;
-volatile bool enviando_pacote = false;
 volatile bool cadastrado = true;
-volatile bool validated = true;
+volatile bool validado = true;
 //Variáveis do pacote
 #define start_byte 	0x7E
 uint8_t UID0 = 0;
@@ -31,8 +33,8 @@ uint8_t UID1 = 0;
 uint8_t UID2 = 0;
 uint8_t UID3 = 0;
 uint8_t Function = 0;
-uint8_t data_1 = 0;
-uint8_t data_2 = 0;
+uint8_t origem_pacote = 0;
+uint8_t dado_pacote = 0;
 uint8_t checksum = 0;
 #define stop_byte 	0x81
 uint8_t PGM_count = 1;
@@ -40,6 +42,7 @@ uint8_t PGM_count = 1;
 //Variáveis de tempo/delays
 #define TIMEOUT_MAX 2000
 uint32_t sem_comunicação = 0;
+uint32_t long_press_b3 = 0;
 uint8_t Tempo_200ms = 10;
 uint16_t Tempo_3000ms = 1000;
 uint16_t Tempo_100ms = 100;
@@ -60,14 +63,10 @@ volatile bool pb4_ultimo_estado = true;
 volatile bool get_status = false;
 //Estado dos botões
 #define NUM_LEDS 5
-uint8_t LD1 = 0;
-uint8_t LD3 = 0;
-uint8_t b4 = 1;
-uint8_t blink1 = 0;
-uint8_t blink2 = 0;
-uint8_t blink3 = 0;
-uint8_t blink4 = 0;
-volatile bool LD2 = 0;
+uint8_t ligar_reles = 0;
+uint8_t status_reles = 0;
+uint8_t modulo_index = 1;
+volatile bool led_envio = 0;
 volatile bool led_cadastro = false;
 volatile bool PGM_cadastrado[5] = {0,0,0,0,0};
 
@@ -96,15 +95,93 @@ typedef struct {
 }PGM_t;
 
 PGM_t modulos[5] = {
-	{0,0,0,0},
-	{0,0,0,0},
-	{0,0,0,0},
-	{0,0,0,0},
-	{0,0,0,0},
+	{0,0,0,0,0},
+	{0,0,0,0,0},
+	{0,0,0,0,0},
+	{0,0,0,0,0},
+	{0,0,0,0,0},
 };
 
 //Máquina de estados
 uint8_t estado = 2;
+
+typedef struct {
+    PGM_t modulos[5];
+    uint8_t pgm_count;
+    uint8_t numero_modulo;
+    uint8_t pgm_cadastrado[5];
+    uint8_t reservado[3]; // Padding opcional para alinhar em 4 bytes
+} FlashData_t;
+
+FlashData_t dados_flash;
+
+void salvar_modulos_na_flash(void)
+{
+	for(int i = 0; i < 5; i++)
+	{
+		dados_flash.modulos[i] = modulos[i];
+	}
+	
+	dados_flash.pgm_count = PGM_count;
+	
+	for(int i = 0; i < 5; i++)
+	{
+		dados_flash.pgm_cadastrado[i] = PGM_cadastrado[i];
+	}
+	
+    // Apaga setor onde os dados serão gravados
+    XMC_FLASH_EraseSector((uint32_t *)FLASH_SECTOR_ADDR);
+
+    // Grava os dados (usa ProgramPage que aceita até 256 bytes por vez)
+    XMC_FLASH_ProgramPage((uint32_t *)FLASH_SECTOR_ADDR, (uint32_t *)&dados_flash);
+}
+
+void carregar_modulos_da_flash(void) 
+{
+    const FlashData_t *ptr_flash = (const FlashData_t *)FLASH_SECTOR_ADDR;
+
+    for (int i = 0; i < 5; i++)
+    {
+        if (ptr_flash->modulos[i].numero == 0xFF &&
+            ptr_flash->modulos[i].UID0 == 0xFF &&
+            ptr_flash->modulos[i].UID1 == 0xFF &&
+            ptr_flash->modulos[i].UID2 == 0xFF &&
+            ptr_flash->modulos[i].UID3 == 0xFF)
+        {
+            // Dados inválidos (apagados), inicializa com 0
+            modulos[i].numero = 0;
+            modulos[i].UID0 = 0;
+            modulos[i].UID1 = 0;
+            modulos[i].UID2 = 0;
+            modulos[i].UID3 = 0;
+        }
+        else
+        {
+            // Dados válidos
+            modulos[i] = ptr_flash->modulos[i];
+        }
+    }
+    
+    for(int i = 0; i < 5; i++)
+    {
+		if(ptr_flash->pgm_cadastrado[i] == 0xFF)
+		{
+			PGM_cadastrado[i] = 0;
+		}else{
+			PGM_cadastrado[i] = ptr_flash->pgm_cadastrado[i];
+		}
+	}
+
+    // Verifica se o PGM_count está apagado
+    if (ptr_flash->pgm_count == 0xFF)
+    {
+        PGM_count = 1;
+    }
+    else
+    {
+        PGM_count = ptr_flash->pgm_count;
+    }
+}
 
 //Rotina para receber dados
 void USIC0_1_IRQHandler(void)
@@ -150,7 +227,7 @@ void USIC0_1_IRQHandler(void)
 			{
 				if(Rx_buffer[1] == modulos[i].UID0 && Rx_buffer[2] == modulos[i].UID1 && Rx_buffer[3] == modulos[i].UID2 && Rx_buffer[4] == modulos[i].UID3)
 				{
-					validated = true;
+					validado = true;
 					cadastrado = true;
 					break;
 				}
@@ -168,6 +245,7 @@ void USIC0_1_IRQHandler(void)
 				modulos[PGM_count].UID3 = Rx_buffer[4];
 				
 				PGM_count++;
+				salvar_modulos_na_flash();
 			}
 		}
 		
@@ -188,27 +266,27 @@ void enviar_pacote_uart()
     uint8_t pacote[11] = {
 			        start_byte,
 			        TAMANHO_BUFFER,
-					modulos[b4].UID0,
-					modulos[b4].UID1,
-					modulos[b4].UID2,
-					modulos[b4].UID3,
+					modulos[modulo_index].UID0,
+					modulos[modulo_index].UID1,
+					modulos[modulo_index].UID2,
+					modulos[modulo_index].UID3,
 			        Function,
-			        data_1,
-			        data_2,
+			        origem_pacote,
+			        dado_pacote,
 			        checksum,
 			        stop_byte,
 			};
 			
-	checksum = start_byte ^ TAMANHO_BUFFER ^ UID0 ^ UID1 ^ UID2 ^ UID3 ^ Function ^ data_1 ^ data_2;
+	checksum = start_byte ^ TAMANHO_BUFFER ^ UID0 ^ UID1 ^ UID2 ^ UID3 ^ Function ^ origem_pacote ^ dado_pacote;
     checksum = ~checksum;
     
-	switch (LD1) {
+	switch (ligar_reles) {
 		case 0:	
 				pacote[1] = TAMANHO_BUFFER;
-				pacote[2] = modulos[b4].UID0;
-				pacote[3] = modulos[b4].UID1;
-				pacote[4] = modulos[b4].UID2;
-				pacote[5] = modulos[b4].UID3;
+				pacote[2] = modulos[modulo_index].UID0;
+				pacote[3] = modulos[modulo_index].UID1;
+				pacote[4] = modulos[modulo_index].UID2;
+				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
 				pacote[8] = 0x00;
@@ -218,10 +296,10 @@ void enviar_pacote_uart()
 		
 		case 1:
 				pacote[1] = TAMANHO_BUFFER;
-				pacote[2] = modulos[b4].UID0;
-				pacote[3] = modulos[b4].UID1;
-				pacote[4] = modulos[b4].UID2;
-				pacote[5] = modulos[b4].UID3;
+				pacote[2] = modulos[modulo_index].UID0;
+				pacote[3] = modulos[modulo_index].UID1;
+				pacote[4] = modulos[modulo_index].UID2;
+				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
 				pacote[8] = 0x01;
@@ -231,10 +309,10 @@ void enviar_pacote_uart()
 		
 		case 2:
 				pacote[1] = TAMANHO_BUFFER;
-				pacote[2] = modulos[b4].UID0;
-				pacote[3] = modulos[b4].UID1;
-				pacote[4] = modulos[b4].UID2;
-				pacote[5] = modulos[b4].UID3;
+				pacote[2] = modulos[modulo_index].UID0;
+				pacote[3] = modulos[modulo_index].UID1;
+				pacote[4] = modulos[modulo_index].UID2;
+				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
 				pacote[8] = 0x03;
@@ -244,10 +322,10 @@ void enviar_pacote_uart()
 		
 		case 3:
 				pacote[1] = TAMANHO_BUFFER;
-				pacote[2] = modulos[b4].UID0;
-				pacote[3] = modulos[b4].UID1;
-				pacote[4] = modulos[b4].UID2;
-				pacote[5] = modulos[b4].UID3;
+				pacote[2] = modulos[modulo_index].UID0;
+				pacote[3] = modulos[modulo_index].UID1;
+				pacote[4] = modulos[modulo_index].UID2;
+				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
 				pacote[8] = 0x07;
@@ -257,10 +335,10 @@ void enviar_pacote_uart()
 		
 		case 4:
 				pacote[1] = TAMANHO_BUFFER;
-				pacote[2] = modulos[b4].UID0;
-				pacote[3] = modulos[b4].UID1;
-				pacote[4] = modulos[b4].UID2;
-				pacote[5] = modulos[b4].UID3;
+				pacote[2] = modulos[modulo_index].UID0;
+				pacote[3] = modulos[modulo_index].UID1;
+				pacote[4] = modulos[modulo_index].UID2;
+				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
 				pacote[8] = 0x0F;
@@ -270,10 +348,10 @@ void enviar_pacote_uart()
 		
 		case 5:
 				pacote[1] = TAMANHO_BUFFER;
-				pacote[2] = modulos[b4].UID0;
-				pacote[3] = modulos[b4].UID1;
-				pacote[4] = modulos[b4].UID2;
-				pacote[5] = modulos[b4].UID3;
+				pacote[2] = modulos[modulo_index].UID0;
+				pacote[3] = modulos[modulo_index].UID1;
+				pacote[4] = modulos[modulo_index].UID2;
+				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'T';
 				pacote[7] = 0x01;
 				pacote[8] = 0x1F;
@@ -283,10 +361,10 @@ void enviar_pacote_uart()
 				
 		default:
 				pacote[1] = TAMANHO_BUFFER;
-				pacote[2] = modulos[b4].UID0;
-				pacote[3] = modulos[b4].UID1;
-				pacote[4] = modulos[b4].UID2;
-				pacote[5] = modulos[b4].UID3;
+				pacote[2] = modulos[modulo_index].UID0;
+				pacote[3] = modulos[modulo_index].UID1;
+				pacote[4] = modulos[modulo_index].UID2;
+				pacote[5] = modulos[modulo_index].UID3;
 				pacote[6] = 'S';
 				pacote[7] = 0x01;
 				pacote[8] = 0x00;
@@ -333,16 +411,16 @@ void Controle()
 			
 			if(!cadastrado)
 			{
-				validated = false;
+				validado = false;
 				estado = CADASTRO;
-			}else if(cadastrado && !validated){
+			}else if(cadastrado && !validado){
 				
 				Buffer_TX[0] = start_byte;
 				Buffer_TX[1] = TAMANHO_BUFFER;
-				Buffer_TX[2] = modulos[b4].UID0;
-				Buffer_TX[3] = modulos[b4].UID1;
-				Buffer_TX[4] = modulos[b4].UID2;
-				Buffer_TX[5] = modulos[b4].UID3;
+				Buffer_TX[2] = modulos[modulo_index].UID0;
+				Buffer_TX[3] = modulos[modulo_index].UID1;
+				Buffer_TX[4] = modulos[modulo_index].UID2;
+				Buffer_TX[5] = modulos[modulo_index].UID3;
 				Buffer_TX[6] = 'A';
 				Buffer_TX[7] = 0x01;
 				Buffer_TX[8] = (PGM_count - 1);
@@ -350,7 +428,7 @@ void Controle()
 		    	Buffer_TX[10] = stop_byte;
 			    	
 			    estado = TRANSMIT;
-			}else if(cadastrado && validated){
+			}else if(cadastrado && validado){
 				if(get_status){
 				
 					get_status = false;
@@ -358,22 +436,22 @@ void Controle()
 					switch (Rx_buffer[7]) 
 					{
 						case 0x00:	
-									LD3 = 0;
+									status_reles = 0;
 									break;				
 						case 0x01:	
-									LD3 = 1;
+									status_reles = 1;
 									break;		
 						case 0x03:	
-									LD3 = 2;
+									status_reles = 2;
 									break;		
 						case 0x07:	
-									LD3 = 3;
+									status_reles = 3;
 									break;	
 						case 0x0F:	
-									LD3 = 4;
+									status_reles = 4;
 									break;			
 						case 0x1F:	
-									LD3 = 5;
+									status_reles = 5;
 									break;	
 					}	
 			 	}
@@ -411,13 +489,13 @@ void Controle()
 			
 			Buffer_TX[0] = start_byte;
 			Buffer_TX[1] = TAMANHO_BUFFER;
-			Buffer_TX[2] = modulos[b4].UID0;
-			Buffer_TX[3] = modulos[b4].UID1;
-			Buffer_TX[4] = modulos[b4].UID2;
-			Buffer_TX[5] = modulos[b4].UID3;
+			Buffer_TX[2] = modulos[modulo_index].UID0;
+			Buffer_TX[3] = modulos[modulo_index].UID1;
+			Buffer_TX[4] = modulos[modulo_index].UID2;
+			Buffer_TX[5] = modulos[modulo_index].UID3;
 			Buffer_TX[6] = 'S';
 			Buffer_TX[7] = 0x01;
-			Buffer_TX[8] = modulos[b4].numero;
+			Buffer_TX[8] = modulos[modulo_index].numero;
 			Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
 		    Buffer_TX[10] = stop_byte;
 		    estado = TRANSMIT;
@@ -476,6 +554,16 @@ void Controle()
 	}
 }
 
+void blink_led(uint8_t led_index, uint8_t n)
+{
+	
+	if (led_index >= NUM_LEDS) return;
+
+    leds[led_index].blink_target = n * 2; // *2 porque liga/desliga conta 2 vezes
+    leds[led_index].blink_count = 0;
+    leds[led_index].piscando = true;
+
+}
 //Rotina quando timer de debounce gerar evento
 void CCU40_0_IRQHandler()
 {
@@ -484,32 +572,31 @@ void CCU40_0_IRQHandler()
     	XMC_CCU4_SLICE_ClearEvent(CCU40_CC40, XMC_CCU4_SLICE_IRQ_ID_PERIOD_MATCH);
 
 		if(XMC_GPIO_GetInput(PB1_PORT, PB1_PIN) == 0){
-			if(LD1 >= 5){
-				LD1 = 0;
+			if(ligar_reles >= 5){
+				ligar_reles = 0;
 			}else{
-				LD1++;
+				ligar_reles++;
 			}
 		}
 		
 		if(XMC_GPIO_GetInput(PB4_PORT, PB4_PIN) == 0){
-			if(b4 >= 2){
-				b4 = 1;
+			if(modulo_index >= 2){
+				modulo_index = 1;
 			}else{
-				b4++;
+				modulo_index++;
 			}
 		}
 		
 		if(XMC_GPIO_GetInput(PB3_PORT, PB3_PIN) == 0){
 			led_cadastro = true;
 			cadastrado = false;
-
 		}
 			
 		if(XMC_GPIO_GetInput(PB2_PORT, PB2_PIN) == 0){
-			LD2 = 1;
+			led_envio = 1;
 			enviar_pacote_uart();
 		}else{
-			LD2 = 0;
+			led_envio = 0;
 		}
 		
 }
@@ -529,20 +616,50 @@ void SysTick_Handler(void)
             // Detectou borda de descida
             esperando_debounce = true;
             XMC_CCU4_SLICE_StartTimer(CCU40_CC40);
-        }else if(!pb2_estado && !pb2_ultimo_estado){
-			LD2 = 1;
+        }
+        
+        if(!pb2_estado && !pb2_ultimo_estado){
+			led_envio = 1;
 		}else{
-			LD2 = 0;
+			led_envio = 0;
 		}
         
+        if(!pb4_estado && !pb4_ultimo_estado)
+        {
+			if(--long_press_b3 == 0)
+			{
+				XMC_GPIO_SetOutputLow(LED_PB4_PORT, LED_PB4_PIN);
+				XMC_FLASH_EraseSector((uint32_t *)FLASH_SECTOR_ADDR);
+				for(int i = 0; i < 5; i++)
+				{
+					modulos[i].numero = 0;
+					modulos[i].UID0 = 0;
+					modulos[i].UID1 = 0;
+					modulos[i].UID2 = 0;
+					modulos[i].UID3 = 0;
+				}
+				PGM_count = 1;
+				
+			}
+			
+		}else if(pb4_estado && !pb4_ultimo_estado){
+			XMC_GPIO_SetOutputHigh(LED_PB4_PORT, LED_PB4_PIN
+			
+			);
+		}else{
+			long_press_b3 = 5000;
+		}
 
         pb1_ultimo_estado = pb1_estado;
         pb2_ultimo_estado = pb2_estado;
         pb3_ultimo_estado = pb3_estado;
         pb4_ultimo_estado = pb4_estado;
     }
+    
+    
 	
-	if(--Tempo_200ms == 0){
+	if(--Tempo_200ms == 0)
+	{
 		Tempo_200ms = 200;
 		acionar_200ms = true;
 		for(int i=0; i<NUM_LEDS; i++){
@@ -576,24 +693,13 @@ void SysTick_Handler(void)
 	systick++;
 }
 
-
-void blink_led(uint8_t led_index, uint8_t n)
-{
-	
-	if (led_index >= NUM_LEDS) return;
-
-    leds[led_index].blink_target = n * 2; // *2 porque liga/desliga conta 2 vezes
-    leds[led_index].blink_count = 0;
-    leds[led_index].piscando = true;
-
-}
 //Rotina para controlar leds
 void Controle_led(){
 	
 	if(acionar_3000ms){
-		blink_led(0, LD1);
-		blink_led(2, LD3);
-		blink_led(3, b4);
+		blink_led(0, ligar_reles);
+		blink_led(2, status_reles);
+		blink_led(3, modulo_index);
 		acionar_3000ms = false;
 	}
 	
@@ -608,7 +714,7 @@ void Controle_led(){
 		
 		if(tentando_cadastrar == 0)
 		{
-			validated = true;
+			validado = true;
 			cadastrado = true;
 			led_cadastro = false;
 			tentando_cadastrar = 100;
@@ -618,7 +724,7 @@ void Controle_led(){
 	}
 	
 	
-	if(LD2){
+	if(led_envio){
 		XMC_GPIO_SetOutputLow(LED_PB2_PORT, LED_PB2_PIN);
 	}else{
 		XMC_GPIO_SetOutputHigh(LED_PB2_PORT, LED_PB2_PIN);
@@ -667,6 +773,7 @@ int main(void)
         XMC_USIC_CH_RXFIFO_SetSizeTriggerLimit(UART1_HW, XMC_USIC_CH_FIFO_SIZE_8WORDS, (TAMANHO_BUFFER - Rx_buffer_index) - 1);
     }
     
+    carregar_modulos_da_flash();
     
     for (;;)
     {
