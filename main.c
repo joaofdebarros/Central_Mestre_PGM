@@ -38,7 +38,7 @@ uint8_t checksum = 0;
 uint8_t PGM_count = 1;
 
 //Variáveis de tempo/delays
-#define TIMEOUT_MAX 5000
+#define TIMEOUT_MAX 2000
 uint32_t sem_comunicação = 0;
 uint8_t Tempo_200ms = 10;
 uint16_t Tempo_3000ms = 1000;
@@ -336,7 +336,7 @@ void Controle()
 			Buffer_TX[5] = 0x00;
 			Buffer_TX[6] = 'A';
 			Buffer_TX[7] = 0x01;
-			Buffer_TX[8] = 0x00;
+			Buffer_TX[8] = PGM_count;
 			Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
 	    	Buffer_TX[10] = stop_byte;
 		    	
