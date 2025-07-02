@@ -417,7 +417,7 @@ void Controle()
 			Buffer_TX[5] = modulos[b4].UID3;
 			Buffer_TX[6] = 'S';
 			Buffer_TX[7] = 0x01;
-			Buffer_TX[8] = 0x00;
+			Buffer_TX[8] = modulos[b4].numero;
 			Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
 		    Buffer_TX[10] = stop_byte;
 		    estado = TRANSMIT;
