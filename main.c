@@ -26,6 +26,7 @@ volatile bool pacote_completo = false;
 volatile bool pacote_obsoleto = false;
 volatile bool cadastrado = true;
 volatile bool validado = true;
+volatile bool deletar = false;
 //Variáveis do pacote
 #define start_byte 	0x7E
 uint8_t UID0 = 0;
@@ -42,7 +43,7 @@ uint8_t PGM_count = 1;
 //Variáveis de tempo/delays
 #define TIMEOUT_MAX 2000
 uint32_t sem_comunicação = 0;
-uint32_t long_press_b3 = 0;
+uint32_t hold_b1 = 0;
 uint8_t Tempo_200ms = 10;
 uint16_t Tempo_3000ms = 1000;
 uint16_t Tempo_100ms = 100;
@@ -219,6 +220,21 @@ void USIC0_1_IRQHandler(void)
 				}
 			}
 			
+		}
+		
+		if(Rx_buffer[5] == 'D' && pacote_completo && (Rx_buffer[1] != 0 || Rx_buffer[2] != 0 || Rx_buffer[3] != 0 || Rx_buffer[4] != 0))
+		{
+			deletar = false;
+			
+			for(int i = 0; i < 5; i++)
+			{
+				modulos[i].numero = 0;
+				modulos[i].UID0 = 0;
+				modulos[i].UID1 = 0;
+				modulos[i].UID2 = 0;
+				modulos[i].UID3 = 0;
+			}
+			PGM_count = 1;
 		}
 		
 		if((Rx_buffer[5] == 'A') && pacote_completo && (Rx_buffer[1] != 0 || Rx_buffer[2] != 0 || Rx_buffer[3] != 0 || Rx_buffer[4] != 0))
@@ -398,9 +414,10 @@ void Controle()
 	#define RECEIVE		0
 	#define CADASTRO	1
 	#define STATUS		2
-	#define TRANSMIT	3
-	#define DELAY_ENVIO	4
-	#define LIMPAR		5
+	#define DELETE		3
+	#define TRANSMIT	4
+	#define DELAY_ENVIO	5
+	#define LIMPAR		6
 	
 	switch (estado) 
 	{
@@ -409,58 +426,63 @@ void Controle()
 			pacote_completo = false;
 			XMC_GPIO_SetOutputHigh(Bus_Controle_PORT, Bus_Controle_PIN);
 			
-			if(!cadastrado)
+			if(deletar)
 			{
-				validado = false;
-				estado = CADASTRO;
-			}else if(cadastrado && !validado){
-				
-				Buffer_TX[0] = start_byte;
-				Buffer_TX[1] = TAMANHO_BUFFER;
-				Buffer_TX[2] = modulos[modulo_index].UID0;
-				Buffer_TX[3] = modulos[modulo_index].UID1;
-				Buffer_TX[4] = modulos[modulo_index].UID2;
-				Buffer_TX[5] = modulos[modulo_index].UID3;
-				Buffer_TX[6] = 'A';
-				Buffer_TX[7] = 0x01;
-				Buffer_TX[8] = (PGM_count - 1);
-				Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
-		    	Buffer_TX[10] = stop_byte;
-			    	
-			    estado = TRANSMIT;
-			}else if(cadastrado && validado){
-				if(get_status){
-				
-					get_status = false;
-					
-					switch (Rx_buffer[7]) 
-					{
-						case 0x00:	
-									status_reles = 0;
-									break;				
-						case 0x01:	
-									status_reles = 1;
-									break;		
-						case 0x03:	
-									status_reles = 2;
-									break;		
-						case 0x07:	
-									status_reles = 3;
-									break;	
-						case 0x0F:	
-									status_reles = 4;
-									break;			
-						case 0x1F:	
-									status_reles = 5;
-									break;	
-					}	
-			 	}
-
-				if(PGM_cadastrado[1] || PGM_cadastrado[2] || PGM_cadastrado[3] || PGM_cadastrado[4]){
-					estado = STATUS;
-				}
+				estado = DELETE;
 			}else{
-				estado = RECEIVE;
+				if(!cadastrado)
+				{
+					validado = false;
+					estado = CADASTRO;
+				}else if(cadastrado && !validado){
+					
+					Buffer_TX[0] = start_byte;
+					Buffer_TX[1] = TAMANHO_BUFFER;
+					Buffer_TX[2] = modulos[modulo_index].UID0;
+					Buffer_TX[3] = modulos[modulo_index].UID1;
+					Buffer_TX[4] = modulos[modulo_index].UID2;
+					Buffer_TX[5] = modulos[modulo_index].UID3;
+					Buffer_TX[6] = 'A';
+					Buffer_TX[7] = 0x01;
+					Buffer_TX[8] = (PGM_count - 1);
+					Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
+			    	Buffer_TX[10] = stop_byte;
+				    	
+				    estado = TRANSMIT;
+				}else if(cadastrado && validado){
+					if(get_status){
+					
+						get_status = false;
+						
+						switch (Rx_buffer[7]) 
+						{
+							case 0x00:	
+										status_reles = 0;
+										break;				
+							case 0x01:	
+										status_reles = 1;
+										break;		
+							case 0x03:	
+										status_reles = 2;
+										break;		
+							case 0x07:	
+										status_reles = 3;
+										break;	
+							case 0x0F:	
+										status_reles = 4;
+										break;			
+							case 0x1F:	
+										status_reles = 5;
+										break;	
+						}	
+				 	}
+	
+					if(PGM_cadastrado[1] || PGM_cadastrado[2] || PGM_cadastrado[3] || PGM_cadastrado[4]){
+						estado = STATUS;
+					}
+				}else{
+					estado = RECEIVE;
+				}
 			}
 			
 		}break;
@@ -502,10 +524,24 @@ void Controle()
 			
 		}break;
 		
+		case DELETE:
+		{
+			Buffer_TX[1] = TAMANHO_BUFFER;
+			Buffer_TX[2] = modulos[modulo_index].UID0;
+			Buffer_TX[3] = modulos[modulo_index].UID1;
+			Buffer_TX[4] = modulos[modulo_index].UID2;
+			Buffer_TX[5] = modulos[modulo_index].UID3;
+			Buffer_TX[6] = 'D';
+			Buffer_TX[7] = 0x01;
+			Buffer_TX[8] = 0x00;
+			Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
+		    Buffer_TX[9] = ~Buffer_TX[9];
+		    estado = TRANSMIT;
+		}break;
+		
 		case TRANSMIT:
 		{
-			
-			delay_tx = systick + 200;
+			delay_tx = systick + 100;
 			aguardando_envio = true;		    
 		    estado = DELAY_ENVIO;
 			
@@ -601,6 +637,13 @@ void CCU40_0_IRQHandler()
 		
 }
 
+void deletar_PGM(){
+	XMC_GPIO_SetOutputLow(LED_PB1_PORT, LED_PB1_PIN);
+	XMC_FLASH_EraseSector((uint32_t *)FLASH_SECTOR_ADDR);
+
+	deletar = true;
+}
+
 //Rotina para controle dos tempos
 void SysTick_Handler(void)
 {
@@ -624,30 +667,16 @@ void SysTick_Handler(void)
 			led_envio = 0;
 		}
         
-        if(!pb4_estado && !pb4_ultimo_estado)
+        if(!pb1_estado && !pb1_ultimo_estado)
         {
-			if(--long_press_b3 == 0)
+			if(--hold_b1 == 0)
 			{
-				XMC_GPIO_SetOutputLow(LED_PB4_PORT, LED_PB4_PIN);
-				XMC_FLASH_EraseSector((uint32_t *)FLASH_SECTOR_ADDR);
-				for(int i = 0; i < 5; i++)
-				{
-					modulos[i].numero = 0;
-					modulos[i].UID0 = 0;
-					modulos[i].UID1 = 0;
-					modulos[i].UID2 = 0;
-					modulos[i].UID3 = 0;
-				}
-				PGM_count = 1;
-				
-			}
-			
-		}else if(pb4_estado && !pb4_ultimo_estado){
-			XMC_GPIO_SetOutputHigh(LED_PB4_PORT, LED_PB4_PIN
-			
-			);
+				deletar_PGM();
+			}	
+		}else if(pb1_estado && !pb1_ultimo_estado){
+			XMC_GPIO_SetOutputHigh(LED_PB1_PORT, LED_PB1_PIN);
 		}else{
-			long_press_b3 = 5000;
+			hold_b1 = 5000;
 		}
 
         pb1_ultimo_estado = pb1_estado;
