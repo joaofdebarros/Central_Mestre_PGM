@@ -220,18 +220,7 @@ void USIC0_1_IRQHandler(void) {
            Rx_buffer[2] == modulos[modulo_index].UID1 &&
            Rx_buffer[3] == modulos[modulo_index].UID2 &&
            Rx_buffer[4] == modulos[modulo_index].UID3)) {
-        esperando_ack = false;
-        enviar_pacote = false;
-        delete_on = false;
-
-        for (int i = 0; i < 5; i++) {
-          modulos[i].numero = 0;
-          modulos[i].UID0 = 0;
-          modulos[i].UID1 = 0;
-          modulos[i].UID2 = 0;
-          modulos[i].UID3 = 0;
-        }
-        PGM_count = 1;
+        
       }
     }
 
@@ -265,7 +254,7 @@ void USIC0_1_IRQHandler(void) {
       }
     }
 
-    if (Rx_buffer[5] == 'S' && Rx_buffer[6] == 0x02) {
+    if (Rx_buffer[5] == 'S' && Rx_buffer[6] == 0x02 && pacote_completo) {
       get_status = true;
     }
 
@@ -300,7 +289,6 @@ void Controle() {
       }
 
       if (delete_on) {
-        esperando_ack = true;
         estado = DELETE;
       }
     } else {
@@ -539,13 +527,22 @@ void Controle() {
   } break;
 
   case DELETE: {
-    if (esperando_ack) {
+		
+	  cadastrado = true;
+	  validado = true;
+	  get_status = false;
+	  
+	  for(int i = 1; i < 5; i++)
+	  {
+		PGM_cadastrado[i] = false;
+	  }
+	  
       Buffer_TX[0] = start_byte;
       Buffer_TX[1] = TAMANHO_BUFFER;
-      Buffer_TX[2] = modulos[modulo_index].UID0;
-      Buffer_TX[3] = modulos[modulo_index].UID1;
-      Buffer_TX[4] = modulos[modulo_index].UID2;
-      Buffer_TX[5] = modulos[modulo_index].UID3;
+      Buffer_TX[2] = 0x00;
+      Buffer_TX[3] = 0x00;
+      Buffer_TX[4] = 0x00;
+      Buffer_TX[5] = 0x00;
       Buffer_TX[6] = 'D';
       Buffer_TX[7] = 0x01;
       Buffer_TX[8] = 0x00;
@@ -555,9 +552,6 @@ void Controle() {
       Buffer_TX[9] = ~Buffer_TX[9];
       Buffer_TX[10] = stop_byte;
       estado = TRANSMIT;
-    } else {
-      enviar_pacote = false;
-    }
 
   } break;
 
@@ -577,8 +571,7 @@ void Controle() {
         XMC_UART_CH_Transmit(UART1_HW, Buffer_TX[i]);
       }
 
-      while (!XMC_USIC_CH_TXFIFO_IsEmpty(UART1_HW))
-        ;
+      while (!XMC_USIC_CH_TXFIFO_IsEmpty(UART1_HW));
 
       pacote_obsoleto = true;
       aguardando_envio = false;
@@ -592,10 +585,24 @@ void Controle() {
       for (uint8_t i = 0; i < sizeof(Buffer_TX); i++) {
         Buffer_TX[i] = 0;
       }
+      
       pacote_completo = false;
       pacote_obsoleto = false;
     }
 
+	if(delete_on)
+	{
+        for (int i = 0; i < 5; i++) 
+        {
+          modulos[i].numero = 0;
+          modulos[i].UID0 = 0;
+          modulos[i].UID1 = 0;
+          modulos[i].UID2 = 0;
+          modulos[i].UID3 = 0;
+        }
+        PGM_count = 1;
+	}
+	
     estado = RECEIVE;
 
   } break;
@@ -636,7 +643,6 @@ void CCU40_0_IRQHandler() {
   if (XMC_GPIO_GetInput(PB3_PORT, PB3_PIN) == 0) {
     led_cadastro = true;
     cadastrado = false;
-    enviar_pacote = true;
   }
 
   if (XMC_GPIO_GetInput(PB2_PORT, PB2_PIN) == 0) {
@@ -686,7 +692,8 @@ void SysTick_Handler(void) {
         deletar_PGM();
       }
     } else if (pb1_estado && !pb1_ultimo_estado) {
-
+	  delete_on = false;
+	  enviar_pacote = false;
       XMC_GPIO_SetOutputHigh(LED_PB1_PORT, LED_PB1_PIN);
     } else {
       hold_b1 = 5000;
