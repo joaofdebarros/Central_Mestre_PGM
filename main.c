@@ -26,9 +26,10 @@ volatile bool pacote_completo = false;
 volatile bool pacote_obsoleto = false;
 volatile bool cadastrado = true;
 volatile bool validado = true;
-volatile bool deletar = false;
 volatile bool enviar_pacote = false;
 volatile bool esperando_ack = false;
+volatile bool toggle_on = false;
+volatile bool delete_on = false;
 // Variáveis do pacote
 #define start_byte 0x7E
 uint8_t UID0 = 0;
@@ -211,22 +212,27 @@ void USIC0_1_IRQHandler(void) {
       if (Rx_buffer[5] == 'T' && pacote_completo && Rx_buffer[7] == ACK) {
         esperando_ack = false;
         enviar_pacote = false;
+        toggle_on = false;
       }
-    }
 
-    if (Rx_buffer[5] == 'D' && pacote_completo &&
-        (Rx_buffer[1] != 0 || Rx_buffer[2] != 0 || Rx_buffer[3] != 0 ||
-         Rx_buffer[4] != 0)) {
-      deletar = false;
+      if (Rx_buffer[5] == 'D' && pacote_completo && Rx_buffer[7] == ACK &&
+          (Rx_buffer[1] == modulos[modulo_index].UID0 &&
+           Rx_buffer[2] == modulos[modulo_index].UID1 &&
+           Rx_buffer[3] == modulos[modulo_index].UID2 &&
+           Rx_buffer[4] == modulos[modulo_index].UID3)) {
+        esperando_ack = false;
+        enviar_pacote = false;
+        delete_on = false;
 
-      for (int i = 0; i < 5; i++) {
-        modulos[i].numero = 0;
-        modulos[i].UID0 = 0;
-        modulos[i].UID1 = 0;
-        modulos[i].UID2 = 0;
-        modulos[i].UID3 = 0;
+        for (int i = 0; i < 5; i++) {
+          modulos[i].numero = 0;
+          modulos[i].UID0 = 0;
+          modulos[i].UID1 = 0;
+          modulos[i].UID2 = 0;
+          modulos[i].UID3 = 0;
+        }
+        PGM_count = 1;
       }
-      PGM_count = 1;
     }
 
     if ((Rx_buffer[5] == 'A') && pacote_completo &&
@@ -241,6 +247,7 @@ void USIC0_1_IRQHandler(void) {
           cadastrado = true;
           break;
         }
+        enviar_pacote = false;
       }
 
       if (PGM_count < 5 && !cadastrado) {
@@ -287,67 +294,66 @@ void Controle() {
     XMC_GPIO_SetOutputHigh(Bus_Controle_PORT, Bus_Controle_PIN);
 
     if (enviar_pacote) {
-      esperando_ack = true;
-      estado = TOGGLE;
+      if (toggle_on) {
+        esperando_ack = true;
+        estado = TOGGLE;
+      }
 
-    } else {
-
-      if (deletar) {
+      if (delete_on) {
+        esperando_ack = true;
         estado = DELETE;
-      } else {
-        if (!cadastrado) {
-          validado = false;
-          estado = CADASTRO;
-        } else if (cadastrado && !validado) {
+      }
+    } else {
+      if (!cadastrado) {
+        validado = false;
+        estado = CADASTRO;
+      } else if (cadastrado && !validado) {
 
-          Buffer_TX[0] = start_byte;
-          Buffer_TX[1] = TAMANHO_BUFFER;
-          Buffer_TX[2] = modulos[modulo_index].UID0;
-          Buffer_TX[3] = modulos[modulo_index].UID1;
-          Buffer_TX[4] = modulos[modulo_index].UID2;
-          Buffer_TX[5] = modulos[modulo_index].UID3;
-          Buffer_TX[6] = 'A';
-          Buffer_TX[7] = 0x01;
-          Buffer_TX[8] = (PGM_count - 1);
-          Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                           Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                           Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
-          Buffer_TX[10] = stop_byte;
+        Buffer_TX[0] = start_byte;
+        Buffer_TX[1] = TAMANHO_BUFFER;
+        Buffer_TX[2] = modulos[modulo_index].UID0;
+        Buffer_TX[3] = modulos[modulo_index].UID1;
+        Buffer_TX[4] = modulos[modulo_index].UID2;
+        Buffer_TX[5] = modulos[modulo_index].UID3;
+        Buffer_TX[6] = 'A';
+        Buffer_TX[7] = 0x01;
+        Buffer_TX[8] = (PGM_count - 1);
+        Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
+                         Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
+                         Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8]);
+        Buffer_TX[10] = stop_byte;
 
-          estado = TRANSMIT;
-        } else if (cadastrado && validado) {
-          if (get_status) {
+        estado = TRANSMIT;
+      } else if (cadastrado && validado) {
+        if (get_status) {
 
-            get_status = false;
+          get_status = false;
 
-            switch (Rx_buffer[7]) {
-            case 0x00:
-              status_reles = 0;
-              break;
-            case 0x01:
-              status_reles = 1;
-              break;
-            case 0x03:
-              status_reles = 2;
-              break;
-            case 0x07:
-              status_reles = 3;
-              break;
-            case 0x0F:
-              status_reles = 4;
-              break;
-            case 0x1F:
-              status_reles = 5;
-              break;
-            }
+          switch (Rx_buffer[7]) {
+          case 0x00:
+            status_reles = 0;
+            break;
+          case 0x01:
+            status_reles = 1;
+            break;
+          case 0x03:
+            status_reles = 2;
+            break;
+          case 0x07:
+            status_reles = 3;
+            break;
+          case 0x0F:
+            status_reles = 4;
+            break;
+          case 0x1F:
+            status_reles = 5;
+            break;
           }
+        }
 
-          if (PGM_cadastrado[1] || PGM_cadastrado[2] || PGM_cadastrado[3] ||
-              PGM_cadastrado[4]) {
-            estado = STATUS;
-          }
-        } else {
-          estado = RECEIVE;
+        if (PGM_cadastrado[1] || PGM_cadastrado[2] || PGM_cadastrado[3] ||
+            PGM_cadastrado[4]) {
+          estado = STATUS;
         }
       }
     }
@@ -533,19 +539,26 @@ void Controle() {
   } break;
 
   case DELETE: {
-    Buffer_TX[1] = TAMANHO_BUFFER;
-    Buffer_TX[2] = modulos[modulo_index].UID0;
-    Buffer_TX[3] = modulos[modulo_index].UID1;
-    Buffer_TX[4] = modulos[modulo_index].UID2;
-    Buffer_TX[5] = modulos[modulo_index].UID3;
-    Buffer_TX[6] = 'D';
-    Buffer_TX[7] = 0x01;
-    Buffer_TX[8] = 0x00;
-    Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^
-                   Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^
-                   Buffer_TX[8];
-    Buffer_TX[9] = ~Buffer_TX[9];
-    estado = TRANSMIT;
+    if (esperando_ack) {
+      Buffer_TX[0] = start_byte;
+      Buffer_TX[1] = TAMANHO_BUFFER;
+      Buffer_TX[2] = modulos[modulo_index].UID0;
+      Buffer_TX[3] = modulos[modulo_index].UID1;
+      Buffer_TX[4] = modulos[modulo_index].UID2;
+      Buffer_TX[5] = modulos[modulo_index].UID3;
+      Buffer_TX[6] = 'D';
+      Buffer_TX[7] = 0x01;
+      Buffer_TX[8] = 0x00;
+      Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^
+                     Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^
+                     Buffer_TX[8];
+      Buffer_TX[9] = ~Buffer_TX[9];
+      Buffer_TX[10] = stop_byte;
+      estado = TRANSMIT;
+    } else {
+      enviar_pacote = false;
+    }
+
   } break;
 
   case TRANSMIT: {
@@ -623,10 +636,12 @@ void CCU40_0_IRQHandler() {
   if (XMC_GPIO_GetInput(PB3_PORT, PB3_PIN) == 0) {
     led_cadastro = true;
     cadastrado = false;
+    enviar_pacote = true;
   }
 
   if (XMC_GPIO_GetInput(PB2_PORT, PB2_PIN) == 0) {
     led_envio = 1;
+    toggle_on = true;
     enviar_pacote = true;
   } else {
     led_envio = 0;
@@ -637,7 +652,7 @@ void deletar_PGM() {
   XMC_GPIO_SetOutputLow(LED_PB1_PORT, LED_PB1_PIN);
   XMC_FLASH_EraseSector((uint32_t *)FLASH_SECTOR_ADDR);
 
-  deletar = true;
+  delete_on = true;
 }
 
 // Rotina para controle dos tempos
@@ -664,10 +679,14 @@ void SysTick_Handler(void) {
     }
 
     if (!pb1_estado && !pb1_ultimo_estado) {
+      Tempo_3000ms = 3000;
       if (--hold_b1 == 0) {
+        delete_on = true;
+        enviar_pacote = true;
         deletar_PGM();
       }
     } else if (pb1_estado && !pb1_ultimo_estado) {
+
       XMC_GPIO_SetOutputHigh(LED_PB1_PORT, LED_PB1_PIN);
     } else {
       hold_b1 = 5000;
