@@ -575,7 +575,7 @@ void Controle() {
 
     if (broadcast_on) {
 
-      delay_tx = systick + 1000;
+      delay_tx = systick + 500;
 
     } else {
       delay_tx = systick + 20;
@@ -654,7 +654,7 @@ void CCU40_0_IRQHandler() {
   }
 
   if (XMC_GPIO_GetInput(PB4_PORT, PB4_PIN) == 0) {
-    if (modulo_index >= 2) {
+    if (modulo_index >= 5) {
       modulo_index = 1;
     } else {
       modulo_index++;
@@ -719,7 +719,7 @@ void SysTick_Handler(void) {
       enviar_pacote = false;
       XMC_GPIO_SetOutputHigh(LED_PB1_PORT, LED_PB1_PIN);
     } else {
-      hold_b1 = 5000;
+      hold_b1 = 2500;
     }
 
     pb1_ultimo_estado = pb1_estado;
