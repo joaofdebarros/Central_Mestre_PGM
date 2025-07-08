@@ -58,7 +58,6 @@ uint32_t hold_b1 = 0;
 uint8_t Tempo_200ms = 10;
 uint16_t Tempo_3000ms = 1000;
 uint16_t Tempo_100ms = 100;
-uint32_t broadcast_delay = 0;
 uint32_t tentando_cadastrar = 100;
 uint8_t piscadas = 0;
 volatile uint32_t systick = 0;
@@ -576,7 +575,7 @@ void Controle() {
 
     if (broadcast_on) {
 
-      delay_tx = systick + 100;
+      delay_tx = systick + 1000;
 
     } else {
       delay_tx = systick + 20;
@@ -667,7 +666,6 @@ void CCU40_0_IRQHandler() {
     cadastrado = false;
     enviar_pacote = true;
     broadcast_on = true;
-    broadcast_delay = systick + 600;
   }
 
   if (XMC_GPIO_GetInput(PB2_PORT, PB2_PIN) == 0) {
