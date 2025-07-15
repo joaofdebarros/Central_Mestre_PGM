@@ -345,7 +345,7 @@ void Controle() {
 
         get_status = false;
 
-        switch (Rx_buffer[7]) {
+        switch (Rx_buffer[8]) {
         case 0x00:
           status_reles = 0;
           break;
