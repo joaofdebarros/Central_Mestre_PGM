@@ -179,20 +179,32 @@ void carregar_modulos_da_flash(void) {
   }
 }
 
+void montar_pacote(uint8_t size, uint8_t ID, uint8_t Addrs_1, uint8_t Addrs_2,
+                   uint8_t Addrs_3, uint8_t Addrs_4, uint8_t function,
+                   uint8_t origin, uint8_t data, volatile uint8_t *destino) {
+  destino[0] = start_byte;
+  destino[1] = size;
+  destino[2] = ID;
+  destino[3] = Addrs_1;
+  destino[4] = Addrs_2;
+  destino[5] = Addrs_3;
+  destino[6] = Addrs_4;
+  destino[7] = function;
+  destino[8] = origin;
+  destino[9] = data;
+
+  destino[10] =
+      ~(destino[0] ^ destino[1] ^ destino[2] ^ destino[3] ^ destino[4] ^
+        destino[5] ^ destino[6] ^ destino[7] ^ destino[8] ^ destino[9]);
+
+  destino[11] = stop_byte;
+}
+
 void enviar_ack() {
-  Buffer_TX[0] = start_byte;
-  Buffer_TX[1] = TAMANHO_BUFFER;
-  Buffer_TX[2] = modulos[PGM_count].UID0;
-  Buffer_TX[3] = modulos[PGM_count].UID1;
-  Buffer_TX[4] = modulos[PGM_count].UID2;
-  Buffer_TX[5] = modulos[PGM_count].UID3;
-  Buffer_TX[6] = 'A';
-  Buffer_TX[7] = 0x01;
-  Buffer_TX[8] = modulos[PGM_count].numero;
-  Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^
-                   Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^
-                   Buffer_TX[8]);
-  Buffer_TX[10] = stop_byte;
+
+  montar_pacote(12, PGM_ID, modulos[PGM_count].UID0, modulos[PGM_count].UID1,
+                modulos[PGM_count].UID2, modulos[PGM_count].UID3, 'A', 0x01,
+                modulos[PGM_count].numero, Buffer_TX);
 
   XMC_GPIO_SetOutputLow(Bus_Controle_PORT, Bus_Controle_PIN);
   for (int i = 0; i < sizeof(Buffer_TX); i++) {
@@ -219,7 +231,7 @@ void USIC0_1_IRQHandler(void) {
       } else {
         if (rx == 0x81) {
           recebendo = false;
-          if (Rx_buffer[6] == 0x02) {
+          if (Rx_buffer[7] == 0x02) {
             pacote_completo = true;
             sem_comunicação = 0;
           }
@@ -239,16 +251,16 @@ void USIC0_1_IRQHandler(void) {
       }
     }
 
-    if ((Rx_buffer[5] == 'A') && pacote_completo &&
-        (Rx_buffer[1] != 0 || Rx_buffer[2] != 0 || Rx_buffer[3] != 0 ||
-         Rx_buffer[4] != 0) &&
-        Rx_buffer[7] == ACK) {
+    if ((Rx_buffer[6] == 'A') && pacote_completo &&
+        (Rx_buffer[2] != 0 || Rx_buffer[3] != 0 || Rx_buffer[4] != 0 ||
+         Rx_buffer[5] != 0) &&
+        Rx_buffer[8] == ACK) {
 
       for (int i = 1; i < PGM_count; i++) {
-        if (Rx_buffer[1] == modulos[i].UID0 &&
-            Rx_buffer[2] == modulos[i].UID1 &&
-            Rx_buffer[3] == modulos[i].UID2 &&
-            Rx_buffer[4] == modulos[i].UID3) {
+        if (Rx_buffer[2] == modulos[i].UID0 &&
+            Rx_buffer[3] == modulos[i].UID1 &&
+            Rx_buffer[4] == modulos[i].UID2 &&
+            Rx_buffer[5] == modulos[i].UID3) {
 
           cadastrado = true;
           break;
@@ -259,33 +271,33 @@ void USIC0_1_IRQHandler(void) {
         broadcast_validate = true;
         PGM_cadastrado[PGM_count] = true;
         modulos[PGM_count].numero = PGM_count;
-        modulos[PGM_count].UID0 = Rx_buffer[1];
-        modulos[PGM_count].UID1 = Rx_buffer[2];
-        modulos[PGM_count].UID2 = Rx_buffer[3];
-        modulos[PGM_count].UID3 = Rx_buffer[4];
-		
-		enviar_ack();
+        modulos[PGM_count].UID0 = Rx_buffer[2];
+        modulos[PGM_count].UID1 = Rx_buffer[3];
+        modulos[PGM_count].UID2 = Rx_buffer[4];
+        modulos[PGM_count].UID3 = Rx_buffer[5];
+
+        enviar_ack();
         PGM_count++;
         salvar_modulos_na_flash();
       }
     }
 
     if (esperando_ack) {
-      if (Rx_buffer[5] == 'T' && pacote_completo && Rx_buffer[7] == ACK) {
+      if (Rx_buffer[6] == 'T' && pacote_completo && Rx_buffer[8] == ACK) {
         esperando_ack = false;
         enviar_pacote = false;
         toggle_on = false;
       }
 
-      if (Rx_buffer[5] == 'D' && pacote_completo && Rx_buffer[7] == ACK &&
-          (Rx_buffer[1] == modulos[modulo_index].UID0 &&
-           Rx_buffer[2] == modulos[modulo_index].UID1 &&
-           Rx_buffer[3] == modulos[modulo_index].UID2 &&
-           Rx_buffer[4] == modulos[modulo_index].UID3)) {
+      if (Rx_buffer[6] == 'D' && pacote_completo && Rx_buffer[8] == ACK &&
+          (Rx_buffer[2] == modulos[modulo_index].UID0 &&
+           Rx_buffer[3] == modulos[modulo_index].UID1 &&
+           Rx_buffer[4] == modulos[modulo_index].UID2 &&
+           Rx_buffer[5] == modulos[modulo_index].UID3)) {
       }
     }
 
-    if (Rx_buffer[5] == 'S' && Rx_buffer[6] == 0x02 && pacote_completo) {
+    if (Rx_buffer[6] == 'S' && Rx_buffer[7] == 0x02 && pacote_completo) {
       get_status = true;
     }
 
@@ -324,10 +336,9 @@ void Controle() {
       }
 
       if (broadcast_on) {
-       
-          cadastrado = false;
-          estado = BROADCAST;
-        
+
+        cadastrado = false;
+        estado = BROADCAST;
       }
     } else {
       if (get_status) {
@@ -366,40 +377,19 @@ void Controle() {
 
   case BROADCAST: {
 
-    Buffer_TX[0] = start_byte;
-    Buffer_TX[1] = TAMANHO_BUFFER;
-    Buffer_TX[2] = 0x00;
-    Buffer_TX[3] = 0x00;
-    Buffer_TX[4] = 0x00;
-    Buffer_TX[5] = 0x00;
-    Buffer_TX[6] = 'A';
-    Buffer_TX[7] = 0x01;
-    Buffer_TX[8] = (PGM_count);
-    Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^
-                     Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^
-                     Buffer_TX[8]);
-    Buffer_TX[10] = stop_byte;
+	montar_pacote(12, PGM_ID, 0, 0, 0, 0, 'A', 0x01, PGM_count,
+                  Buffer_TX);
 
     estado = TRANSMIT;
 
   } break;
 
-
   case STATUS: {
 
-    Buffer_TX[0] = start_byte;
-    Buffer_TX[1] = TAMANHO_BUFFER;
-    Buffer_TX[2] = modulos[modulo_index].UID0;
-    Buffer_TX[3] = modulos[modulo_index].UID1;
-    Buffer_TX[4] = modulos[modulo_index].UID2;
-    Buffer_TX[5] = modulos[modulo_index].UID3;
-    Buffer_TX[6] = 'S';
-    Buffer_TX[7] = 0x01;
-    Buffer_TX[8] = modulos[modulo_index].numero;
-    Buffer_TX[9] = ~(Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^
-                     Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^
-                     Buffer_TX[8]);
-    Buffer_TX[10] = stop_byte;
+	montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'S', 0x01,
+                modulos[modulo_index].numero, Buffer_TX);
+                
     estado = TRANSMIT;
 
   } break;
@@ -408,132 +398,58 @@ void Controle() {
     if (esperando_ack) {
       switch (ligar_reles) {
       case 0:
-        Buffer_TX[0] = start_byte;
-        Buffer_TX[1] = TAMANHO_BUFFER;
-        Buffer_TX[2] = modulos[modulo_index].UID0;
-        Buffer_TX[3] = modulos[modulo_index].UID1;
-        Buffer_TX[4] = modulos[modulo_index].UID2;
-        Buffer_TX[5] = modulos[modulo_index].UID3;
-        Buffer_TX[6] = 'T';
-        Buffer_TX[7] = 0x01;
-        Buffer_TX[8] = 0x00;
-        Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                       Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                       Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
-        Buffer_TX[9] = ~Buffer_TX[9];
-        Buffer_TX[10] = stop_byte;
+      	
+      	montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                0x00, Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 1:
-        Buffer_TX[0] = start_byte;
-        Buffer_TX[1] = TAMANHO_BUFFER;
-        Buffer_TX[2] = modulos[modulo_index].UID0;
-        Buffer_TX[3] = modulos[modulo_index].UID1;
-        Buffer_TX[4] = modulos[modulo_index].UID2;
-        Buffer_TX[5] = modulos[modulo_index].UID3;
-        Buffer_TX[6] = 'T';
-        Buffer_TX[7] = 0x01;
-        Buffer_TX[8] = 0x01;
-        Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                       Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                       Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
-        Buffer_TX[9] = ~Buffer_TX[9];
-        Buffer_TX[10] = stop_byte;
+        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                0x01, Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 2:
-        Buffer_TX[0] = start_byte;
-        Buffer_TX[1] = TAMANHO_BUFFER;
-        Buffer_TX[2] = modulos[modulo_index].UID0;
-        Buffer_TX[3] = modulos[modulo_index].UID1;
-        Buffer_TX[4] = modulos[modulo_index].UID2;
-        Buffer_TX[5] = modulos[modulo_index].UID3;
-        Buffer_TX[6] = 'T';
-        Buffer_TX[7] = 0x01;
-        Buffer_TX[8] = 0x03;
-        Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                       Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                       Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
-        Buffer_TX[9] = ~Buffer_TX[9];
-        Buffer_TX[10] = stop_byte;
+        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                0x03, Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 3:
-        Buffer_TX[0] = start_byte;
-        Buffer_TX[1] = TAMANHO_BUFFER;
-        Buffer_TX[2] = modulos[modulo_index].UID0;
-        Buffer_TX[3] = modulos[modulo_index].UID1;
-        Buffer_TX[4] = modulos[modulo_index].UID2;
-        Buffer_TX[5] = modulos[modulo_index].UID3;
-        Buffer_TX[6] = 'T';
-        Buffer_TX[7] = 0x01;
-        Buffer_TX[8] = 0x07;
-        Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                       Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                       Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
-        Buffer_TX[9] = ~Buffer_TX[9];
-        Buffer_TX[10] = stop_byte;
+        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                0x07, Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 4:
-        Buffer_TX[0] = start_byte;
-        Buffer_TX[1] = TAMANHO_BUFFER;
-        Buffer_TX[2] = modulos[modulo_index].UID0;
-        Buffer_TX[3] = modulos[modulo_index].UID1;
-        Buffer_TX[4] = modulos[modulo_index].UID2;
-        Buffer_TX[5] = modulos[modulo_index].UID3;
-        Buffer_TX[6] = 'T';
-        Buffer_TX[7] = 0x01;
-        Buffer_TX[8] = 0x0F;
-        Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                       Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                       Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
-        Buffer_TX[9] = ~Buffer_TX[9];
-        Buffer_TX[10] = stop_byte;
+        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                0x0F, Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 5:
-        Buffer_TX[0] = start_byte;
-        Buffer_TX[1] = TAMANHO_BUFFER;
-        Buffer_TX[2] = modulos[modulo_index].UID0;
-        Buffer_TX[3] = modulos[modulo_index].UID1;
-        Buffer_TX[4] = modulos[modulo_index].UID2;
-        Buffer_TX[5] = modulos[modulo_index].UID3;
-        Buffer_TX[6] = 'T';
-        Buffer_TX[7] = 0x01;
-        Buffer_TX[8] = 0x1F;
-        Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                       Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                       Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
-        Buffer_TX[9] = ~Buffer_TX[9];
-        Buffer_TX[10] = stop_byte;
+        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                0x1F, Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       default:
-        Buffer_TX[1] = TAMANHO_BUFFER;
-        Buffer_TX[2] = modulos[modulo_index].UID0;
-        Buffer_TX[3] = modulos[modulo_index].UID1;
-        Buffer_TX[4] = modulos[modulo_index].UID2;
-        Buffer_TX[5] = modulos[modulo_index].UID3;
-        Buffer_TX[6] = 'S';
-        Buffer_TX[7] = 0x01;
-        Buffer_TX[8] = 0x00;
-        Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^
-                       Buffer_TX[3] ^ Buffer_TX[4] ^ Buffer_TX[5] ^
-                       Buffer_TX[6] ^ Buffer_TX[7] ^ Buffer_TX[8];
-        Buffer_TX[9] = ~Buffer_TX[9];
+        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                0x00, Buffer_TX);
 
         estado = TRANSMIT;
         break;
@@ -553,20 +469,9 @@ void Controle() {
       PGM_cadastrado[i] = false;
     }
 
-    Buffer_TX[0] = start_byte;
-    Buffer_TX[1] = TAMANHO_BUFFER;
-    Buffer_TX[2] = 0x00;
-    Buffer_TX[3] = 0x00;
-    Buffer_TX[4] = 0x00;
-    Buffer_TX[5] = 0x00;
-    Buffer_TX[6] = 'D';
-    Buffer_TX[7] = 0x01;
-    Buffer_TX[8] = 0x00;
-    Buffer_TX[9] = Buffer_TX[0] ^ Buffer_TX[1] ^ Buffer_TX[2] ^ Buffer_TX[3] ^
-                   Buffer_TX[4] ^ Buffer_TX[5] ^ Buffer_TX[6] ^ Buffer_TX[7] ^
-                   Buffer_TX[8];
-    Buffer_TX[9] = ~Buffer_TX[9];
-    Buffer_TX[10] = stop_byte;
+	montar_pacote(12, PGM_ID, 0, 0, 0, 0, 'D', 0x01, 0,
+                  Buffer_TX);
+
     estado = TRANSMIT;
 
   } break;
@@ -578,7 +483,7 @@ void Controle() {
       delay_tx = systick + 500;
 
     } else {
-      delay_tx = systick + 20;
+      delay_tx = systick + 30;
     }
 
     estado = DELAY_ENVIO;
@@ -654,7 +559,7 @@ void CCU40_0_IRQHandler() {
   }
 
   if (XMC_GPIO_GetInput(PB4_PORT, PB4_PIN) == 0) {
-    if (modulo_index >= 5) {
+    if (modulo_index >= 2) {
       modulo_index = 1;
     } else {
       modulo_index++;
