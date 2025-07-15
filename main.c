@@ -12,6 +12,17 @@
 #include <xmc_flash.h>
 #include <xmc_scu.h>
 
+#define ADRS0 2
+#define ADRS1 3
+#define ADRS2 4
+#define ADRS3 5
+#define FUNCTION 6
+#define ORIGIN 7
+#define DATA 8
+
+#define MASTER 1
+#define SLAVE 2
+
 #define FLASH_SECTOR_ADDR 0x10010000 // Endereço de setor livre
 
 #define TAMANHO_BUFFER 12
@@ -231,7 +242,7 @@ void USIC0_1_IRQHandler(void) {
       } else {
         if (rx == 0x81) {
           recebendo = false;
-          if (Rx_buffer[7] == 0x02) {
+          if (Rx_buffer[ORIGIN] == SLAVE) {
             pacote_completo = true;
             sem_comunicação = 0;
           }
@@ -251,16 +262,16 @@ void USIC0_1_IRQHandler(void) {
       }
     }
 
-    if ((Rx_buffer[6] == 'A') && pacote_completo &&
-        (Rx_buffer[2] != 0 || Rx_buffer[3] != 0 || Rx_buffer[4] != 0 ||
-         Rx_buffer[5] != 0) &&
-        Rx_buffer[8] == ACK) {
+    if ((Rx_buffer[FUNCTION] == 'A') && pacote_completo &&
+        (Rx_buffer[ADRS0] != 0 || Rx_buffer[ADRS1] != 0 || Rx_buffer[ADRS2] != 0 ||
+         Rx_buffer[ADRS3] != 0) &&
+        Rx_buffer[DATA] == ACK) {
 
       for (int i = 1; i < PGM_count; i++) {
-        if (Rx_buffer[2] == modulos[i].UID0 &&
-            Rx_buffer[3] == modulos[i].UID1 &&
-            Rx_buffer[4] == modulos[i].UID2 &&
-            Rx_buffer[5] == modulos[i].UID3) {
+        if (Rx_buffer[ADRS0] == modulos[i].UID0 &&
+            Rx_buffer[ADRS1] == modulos[i].UID1 &&
+            Rx_buffer[ADRS2] == modulos[i].UID2 &&
+            Rx_buffer[ADRS3] == modulos[i].UID3) {
 
           cadastrado = true;
           break;
@@ -271,10 +282,10 @@ void USIC0_1_IRQHandler(void) {
         broadcast_validate = true;
         PGM_cadastrado[PGM_count] = true;
         modulos[PGM_count].numero = PGM_count;
-        modulos[PGM_count].UID0 = Rx_buffer[2];
-        modulos[PGM_count].UID1 = Rx_buffer[3];
-        modulos[PGM_count].UID2 = Rx_buffer[4];
-        modulos[PGM_count].UID3 = Rx_buffer[5];
+        modulos[PGM_count].UID0 = Rx_buffer[ADRS0];
+        modulos[PGM_count].UID1 = Rx_buffer[ADRS1];
+        modulos[PGM_count].UID2 = Rx_buffer[ADRS2];
+        modulos[PGM_count].UID3 = Rx_buffer[ADRS3];
 
         enviar_ack();
         PGM_count++;
@@ -283,13 +294,13 @@ void USIC0_1_IRQHandler(void) {
     }
 
     if (esperando_ack) {
-      if (Rx_buffer[6] == 'T' && pacote_completo && Rx_buffer[8] == ACK) {
+      if (Rx_buffer[FUNCTION] == 'T' && pacote_completo && Rx_buffer[DATA] == ACK) {
         esperando_ack = false;
         enviar_pacote = false;
         toggle_on = false;
       }
 
-      if (Rx_buffer[6] == 'D' && pacote_completo && Rx_buffer[8] == ACK &&
+      if (Rx_buffer[FUNCTION] == 'D' && pacote_completo && Rx_buffer[DATA] == ACK &&
           (Rx_buffer[2] == modulos[modulo_index].UID0 &&
            Rx_buffer[3] == modulos[modulo_index].UID1 &&
            Rx_buffer[4] == modulos[modulo_index].UID2 &&
@@ -297,7 +308,7 @@ void USIC0_1_IRQHandler(void) {
       }
     }
 
-    if (Rx_buffer[6] == 'S' && Rx_buffer[7] == 0x02 && pacote_completo) {
+    if (Rx_buffer[FUNCTION] == 'S' && Rx_buffer[ORIGIN] == 0x02 && pacote_completo) {
       get_status = true;
     }
 
@@ -345,7 +356,7 @@ void Controle() {
 
         get_status = false;
 
-        switch (Rx_buffer[8]) {
+        switch (Rx_buffer[DATA]) {
         case 0x00:
           status_reles = 0;
           break;
