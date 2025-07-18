@@ -349,7 +349,7 @@
                     <Parameters>
                         <Param id="AlternativeInterrupt" value="false"/>
                         <Param id="AlternativeInterruptSRSel" value="0"/>
-                        <Param id="BaudRate" value="9600"/>
+                        <Param id="BaudRate" value="1200"/>
                         <Param id="BaudRateGeneratorClockSrc" value="XMC_USIC_CH_BRG_CLOCK_SOURCE_DIVIDER"/>
                         <Param id="ClockDividerMode" value="XMC_USIC_CH_BRG_CLOCK_DIVIDER_MODE_FRACTIONAL"/>
                         <Param id="CollisionDetectionEvent" value="false"/>

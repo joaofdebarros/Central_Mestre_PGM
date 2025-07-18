@@ -34,6 +34,7 @@ uint8_t Buffer_TX[TAMANHO_BUFFER] = {0};
 typedef enum {
   PGM_ID = 0x01,
   PGM_BROADCAST_ID = 0x02,
+  PGM_ID_RESPONSE = 0x03,
 } PGM_DEVICE_ID_t;
 
 // Flags de envio e recepção de dados
@@ -480,7 +481,7 @@ void Controle() {
       PGM_cadastrado[i] = false;
     }
 
-	montar_pacote(12, PGM_ID, 0, 0, 0, 0, 'D', 0x01, 0,
+	montar_pacote(12, PGM_BROADCAST_ID, 0, 0, 0, 0, 'D', 0x01, 0,
                   Buffer_TX);
 
     estado = TRANSMIT;
@@ -494,7 +495,7 @@ void Controle() {
       delay_tx = systick + 500;
 
     } else {
-      delay_tx = systick + 30;
+      delay_tx = systick + 150;
     }
 
     estado = DELAY_ENVIO;
