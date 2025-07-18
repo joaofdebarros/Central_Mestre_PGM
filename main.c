@@ -12,20 +12,15 @@
 #include <xmc_flash.h>
 #include <xmc_scu.h>
 
-#define IDT	  1
-#define ADRS0 2
-#define ADRS1 3
-#define ADRS2 4
-#define ADRS3 5
-#define FUNCTION 6
-#define DATA 7
-
-#define MASTER 1
-#define SLAVE 2
+#define IDT 1
+#define UNIQUEID 2
+#define FUNCTION 3
+#define DATA 4
 
 #define FLASH_SECTOR_ADDR 0x10010000 // Endereço de setor livre
 
-#define TAMANHO_BUFFER 11
+#define TAMANHO_BUFFER 8
+#define TAMANHO_BUFFER_ACK 11
 // Buffer de envio e recepção de dados
 volatile uint8_t Rx_buffer[TAMANHO_BUFFER];
 volatile uint8_t Rx_buffer_index = 0;
@@ -110,15 +105,11 @@ LED_t leds[NUM_LEDS] = {
 
 typedef struct {
   uint8_t numero;
-  uint8_t UID0;
-  uint8_t UID1;
-  uint8_t UID2;
-  uint8_t UID3;
+  uint8_t UID;
 } PGM_t;
 
 PGM_t modulos[5] = {
-    {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0}, {0, 0, 0, 0, 0},
+    {0, 0}, {0, 0}, {0, 0}, {0, 0}, {0, 0},
 };
 
 // Máquina de estados
@@ -158,16 +149,10 @@ void carregar_modulos_da_flash(void) {
 
   for (int i = 0; i < 5; i++) {
     if (ptr_flash->modulos[i].numero == 0xFF &&
-        ptr_flash->modulos[i].UID0 == 0xFF &&
-        ptr_flash->modulos[i].UID1 == 0xFF &&
-        ptr_flash->modulos[i].UID2 == 0xFF &&
-        ptr_flash->modulos[i].UID3 == 0xFF) {
+        ptr_flash->modulos[i].UID == 0xFF) {
       // Dados inválidos (apagados), inicializa com 0
       modulos[i].numero = 0;
-      modulos[i].UID0 = 0;
-      modulos[i].UID1 = 0;
-      modulos[i].UID2 = 0;
-      modulos[i].UID3 = 0;
+      modulos[i].UID = 0;
     } else {
       // Dados válidos
       modulos[i] = ptr_flash->modulos[i];
@@ -190,30 +175,45 @@ void carregar_modulos_da_flash(void) {
   }
 }
 
-void montar_pacote(uint8_t size, uint8_t ID, uint8_t Addrs_1, uint8_t Addrs_2,
-                   uint8_t Addrs_3, uint8_t Addrs_4, uint8_t function, uint8_t data, volatile uint8_t *destino) {
+void montar_pacote(uint8_t size, uint8_t ID, uint8_t Addrs, uint8_t function,
+                   uint8_t data, volatile uint8_t *destino) {
   destino[0] = start_byte;
   destino[1] = size;
   destino[2] = ID;
-  destino[3] = Addrs_1;
-  destino[4] = Addrs_2;
-  destino[5] = Addrs_3;
-  destino[6] = Addrs_4;
-  destino[7] = function;
-  destino[8] = data;
+  destino[3] = Addrs;
+  destino[4] = function;
+  destino[5] = data;
 
-  destino[9] =
-      ~(destino[0] ^ destino[1] ^ destino[2] ^ destino[3] ^ destino[4] ^
-        destino[5] ^ destino[6] ^ destino[7] ^ destino[8]);
+  destino[6] = ~(destino[0] ^ destino[1] ^ destino[2] ^ destino[3] ^
+                 destino[4] ^ destino[5]);
 
-  destino[10] = stop_byte;
+  destino[7] = stop_byte;
 }
+
+//void montar_pacote_ack(uint8_t size, uint8_t ID, uint8_t Addrs_1,
+//                       uint8_t Addrs_2, uint8_t Addrs_3, uint8_t Addrs_4,
+//                       uint8_t function, uint8_t data,
+//                       volatile uint8_t *destino) {
+//  destino[0] = start_byte;
+//  destino[1] = size;
+//  destino[2] = ID;
+//  destino[3] = Addrs_1;
+//  destino[4] = Addrs_1;
+//  destino[5] = Addrs_1;
+//  destino[6] = Addrs_1;
+//  destino[7] = function;
+//  destino[8] = data;
+//  destino[9] =
+//      ~(destino[0] ^ destino[1] ^ destino[2] ^ destino[3] ^ destino[4] ^
+//        destino[5] ^ destino[6] ^ destino[7] ^ destino[8]);
+//
+//  destino[10] = stop_byte;
+//}
 
 void enviar_ack() {
 
-  montar_pacote(12, PGM_ID, modulos[PGM_count].UID0, modulos[PGM_count].UID1,
-                modulos[PGM_count].UID2, modulos[PGM_count].UID3, 'A',
-                modulos[PGM_count].numero, Buffer_TX);
+  montar_pacote(TAMANHO_BUFFER_ACK, PGM_ID, modulos[PGM_count].UID, 'A',
+                    modulos[PGM_count].numero, Buffer_TX);
 
   XMC_GPIO_SetOutputLow(Bus_Controle_PORT, Bus_Controle_PIN);
   for (int i = 0; i < sizeof(Buffer_TX); i++) {
@@ -250,7 +250,7 @@ void USIC0_1_IRQHandler(void) {
           break;
         } else {
 
-          if (Rx_buffer_index < TAMANHO_BUFFER) {
+          if (Rx_buffer_index < 20) {
             Rx_buffer[Rx_buffer_index++] = rx;
           } else {
             recebendo = false;
@@ -260,17 +260,14 @@ void USIC0_1_IRQHandler(void) {
       }
     }
 
-    if ((Rx_buffer[FUNCTION] == 'A') && pacote_completo &&
-        (Rx_buffer[ADRS0] != 0 || Rx_buffer[ADRS1] != 0 || Rx_buffer[ADRS2] != 0 ||
-         Rx_buffer[ADRS3] != 0) &&
-        Rx_buffer[DATA] == ACK) {
+    if ((Rx_buffer[6] == 'A') && pacote_completo &&
+        (Rx_buffer[2] != 0 || Rx_buffer[3] != 0 ||
+         Rx_buffer[4] != 0 || Rx_buffer[5] != 0) &&
+        Rx_buffer[7] != 0) {
 
       for (int i = 1; i < PGM_count; i++) {
-        if (Rx_buffer[ADRS0] == modulos[i].UID0 &&
-            Rx_buffer[ADRS1] == modulos[i].UID1 &&
-            Rx_buffer[ADRS2] == modulos[i].UID2 &&
-            Rx_buffer[ADRS3] == modulos[i].UID3) {
-
+        if (Rx_buffer[7] == modulos[i].UID) {
+          // MANDAR REFAZER O UID COM INCREMENTO
           cadastrado = true;
           break;
         }
@@ -280,10 +277,8 @@ void USIC0_1_IRQHandler(void) {
         broadcast_validate = true;
         PGM_cadastrado[PGM_count] = true;
         modulos[PGM_count].numero = PGM_count;
-        modulos[PGM_count].UID0 = Rx_buffer[ADRS0];
-        modulos[PGM_count].UID1 = Rx_buffer[ADRS1];
-        modulos[PGM_count].UID2 = Rx_buffer[ADRS2];
-        modulos[PGM_count].UID3 = Rx_buffer[ADRS3];
+        modulos[PGM_count].UID = Rx_buffer[7];
+        ;
 
         enviar_ack();
         PGM_count++;
@@ -292,21 +287,21 @@ void USIC0_1_IRQHandler(void) {
     }
 
     if (esperando_ack) {
-      if (Rx_buffer[FUNCTION] == 'T' && pacote_completo && Rx_buffer[DATA] == ACK) {
+      if (Rx_buffer[FUNCTION] == 'T' && pacote_completo &&
+          Rx_buffer[DATA] == ACK) {
         esperando_ack = false;
         enviar_pacote = false;
         toggle_on = false;
       }
 
-      if (Rx_buffer[FUNCTION] == 'D' && pacote_completo && Rx_buffer[DATA] == ACK &&
-          (Rx_buffer[2] == modulos[modulo_index].UID0 &&
-           Rx_buffer[3] == modulos[modulo_index].UID1 &&
-           Rx_buffer[4] == modulos[modulo_index].UID2 &&
-           Rx_buffer[5] == modulos[modulo_index].UID3)) {
+      if (Rx_buffer[FUNCTION] == 'D' && pacote_completo &&
+          Rx_buffer[DATA] == ACK &&
+          (Rx_buffer[UNIQUEID] == modulos[modulo_index].UID)) {
       }
     }
 
-    if (Rx_buffer[FUNCTION] == 'S' && Rx_buffer[IDT] == PGM_ID_RESPONSE && pacote_completo) {
+    if (Rx_buffer[FUNCTION] == 'S' && Rx_buffer[IDT] == PGM_ID_RESPONSE &&
+        pacote_completo) {
       get_status = true;
     }
 
@@ -386,8 +381,7 @@ void Controle() {
 
   case BROADCAST: {
 
-	montar_pacote(12, PGM_ID, 0, 0, 0, 0, 'A', PGM_count,
-                  Buffer_TX);
+    montar_pacote(TAMANHO_BUFFER, PGM_ID, 0, 'A', PGM_count, Buffer_TX);
 
     estado = TRANSMIT;
 
@@ -395,10 +389,9 @@ void Controle() {
 
   case STATUS: {
 
-	montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'S',
-                modulos[modulo_index].numero, Buffer_TX);
-                
+    montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'S',
+                  modulos[modulo_index].numero, Buffer_TX);
+
     estado = TRANSMIT;
 
   } break;
@@ -407,58 +400,51 @@ void Controle() {
     if (esperando_ack) {
       switch (ligar_reles) {
       case 0:
-      	
-      	montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
-                0x00, Buffer_TX);
+
+        montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'T', 0x00,
+                      Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 1:
-        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
-                0x01, Buffer_TX);
+        montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'T', 0x01,
+                      Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 2:
-        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
-                0x03, Buffer_TX);
+        montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'T', 0x03,
+                      Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 3:
-        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
-                0x07, Buffer_TX);
+        montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'T', 0x07,
+                      Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 4:
-        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
-                0x0F, Buffer_TX);
+        montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'T', 0x0F,
+                      Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       case 5:
-        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
-                0x1F, Buffer_TX);
+        montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'T', 0x1F,
+                      Buffer_TX);
 
         estado = TRANSMIT;
         break;
 
       default:
-        montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
-                0x00, Buffer_TX);
+        montar_pacote(TAMANHO_BUFFER, PGM_ID, modulos[modulo_index].UID, 'T', 0x00,
+                      Buffer_TX);
 
         estado = TRANSMIT;
         break;
@@ -478,8 +464,7 @@ void Controle() {
       PGM_cadastrado[i] = false;
     }
 
-	montar_pacote(12, PGM_BROADCAST_ID, 0, 0, 0, 0, 'D', 0,
-                  Buffer_TX);
+    montar_pacote(TAMANHO_BUFFER, PGM_BROADCAST_ID, 0, 'D', 0, Buffer_TX);
 
     estado = TRANSMIT;
 
@@ -530,10 +515,7 @@ void Controle() {
     if (delete_on) {
       for (int i = 0; i < 5; i++) {
         modulos[i].numero = 0;
-        modulos[i].UID0 = 0;
-        modulos[i].UID1 = 0;
-        modulos[i].UID2 = 0;
-        modulos[i].UID3 = 0;
+        modulos[i].UID = 0;
       }
       PGM_count = 1;
     }
