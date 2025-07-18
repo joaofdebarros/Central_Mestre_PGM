@@ -12,20 +12,20 @@
 #include <xmc_flash.h>
 #include <xmc_scu.h>
 
+#define IDT	  1
 #define ADRS0 2
 #define ADRS1 3
 #define ADRS2 4
 #define ADRS3 5
 #define FUNCTION 6
-#define ORIGIN 7
-#define DATA 8
+#define DATA 7
 
 #define MASTER 1
 #define SLAVE 2
 
 #define FLASH_SECTOR_ADDR 0x10010000 // Endereço de setor livre
 
-#define TAMANHO_BUFFER 12
+#define TAMANHO_BUFFER 11
 // Buffer de envio e recepção de dados
 volatile uint8_t Rx_buffer[TAMANHO_BUFFER];
 volatile uint8_t Rx_buffer_index = 0;
@@ -55,7 +55,6 @@ uint8_t UID1 = 0;
 uint8_t UID2 = 0;
 uint8_t UID3 = 0;
 uint8_t Function = 0;
-uint8_t origem_pacote = 0;
 uint8_t dado_pacote = 0;
 uint8_t checksum = 0;
 #define stop_byte 0x81
@@ -192,8 +191,7 @@ void carregar_modulos_da_flash(void) {
 }
 
 void montar_pacote(uint8_t size, uint8_t ID, uint8_t Addrs_1, uint8_t Addrs_2,
-                   uint8_t Addrs_3, uint8_t Addrs_4, uint8_t function,
-                   uint8_t origin, uint8_t data, volatile uint8_t *destino) {
+                   uint8_t Addrs_3, uint8_t Addrs_4, uint8_t function, uint8_t data, volatile uint8_t *destino) {
   destino[0] = start_byte;
   destino[1] = size;
   destino[2] = ID;
@@ -202,20 +200,19 @@ void montar_pacote(uint8_t size, uint8_t ID, uint8_t Addrs_1, uint8_t Addrs_2,
   destino[5] = Addrs_3;
   destino[6] = Addrs_4;
   destino[7] = function;
-  destino[8] = origin;
-  destino[9] = data;
+  destino[8] = data;
 
-  destino[10] =
+  destino[9] =
       ~(destino[0] ^ destino[1] ^ destino[2] ^ destino[3] ^ destino[4] ^
-        destino[5] ^ destino[6] ^ destino[7] ^ destino[8] ^ destino[9]);
+        destino[5] ^ destino[6] ^ destino[7] ^ destino[8]);
 
-  destino[11] = stop_byte;
+  destino[10] = stop_byte;
 }
 
 void enviar_ack() {
 
   montar_pacote(12, PGM_ID, modulos[PGM_count].UID0, modulos[PGM_count].UID1,
-                modulos[PGM_count].UID2, modulos[PGM_count].UID3, 'A', 0x01,
+                modulos[PGM_count].UID2, modulos[PGM_count].UID3, 'A',
                 modulos[PGM_count].numero, Buffer_TX);
 
   XMC_GPIO_SetOutputLow(Bus_Controle_PORT, Bus_Controle_PIN);
@@ -243,7 +240,7 @@ void USIC0_1_IRQHandler(void) {
       } else {
         if (rx == 0x81) {
           recebendo = false;
-          if (Rx_buffer[ORIGIN] == SLAVE) {
+          if (Rx_buffer[IDT] == PGM_ID_RESPONSE) {
             pacote_completo = true;
             sem_comunicação = 0;
           }
@@ -309,7 +306,7 @@ void USIC0_1_IRQHandler(void) {
       }
     }
 
-    if (Rx_buffer[FUNCTION] == 'S' && Rx_buffer[ORIGIN] == 0x02 && pacote_completo) {
+    if (Rx_buffer[FUNCTION] == 'S' && Rx_buffer[IDT] == PGM_ID_RESPONSE && pacote_completo) {
       get_status = true;
     }
 
@@ -389,7 +386,7 @@ void Controle() {
 
   case BROADCAST: {
 
-	montar_pacote(12, PGM_ID, 0, 0, 0, 0, 'A', 0x01, PGM_count,
+	montar_pacote(12, PGM_ID, 0, 0, 0, 0, 'A', PGM_count,
                   Buffer_TX);
 
     estado = TRANSMIT;
@@ -399,7 +396,7 @@ void Controle() {
   case STATUS: {
 
 	montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'S', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'S',
                 modulos[modulo_index].numero, Buffer_TX);
                 
     estado = TRANSMIT;
@@ -412,7 +409,7 @@ void Controle() {
       case 0:
       	
       	montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
                 0x00, Buffer_TX);
 
         estado = TRANSMIT;
@@ -420,7 +417,7 @@ void Controle() {
 
       case 1:
         montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
                 0x01, Buffer_TX);
 
         estado = TRANSMIT;
@@ -428,7 +425,7 @@ void Controle() {
 
       case 2:
         montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
                 0x03, Buffer_TX);
 
         estado = TRANSMIT;
@@ -436,7 +433,7 @@ void Controle() {
 
       case 3:
         montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
                 0x07, Buffer_TX);
 
         estado = TRANSMIT;
@@ -444,7 +441,7 @@ void Controle() {
 
       case 4:
         montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
                 0x0F, Buffer_TX);
 
         estado = TRANSMIT;
@@ -452,7 +449,7 @@ void Controle() {
 
       case 5:
         montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
                 0x1F, Buffer_TX);
 
         estado = TRANSMIT;
@@ -460,7 +457,7 @@ void Controle() {
 
       default:
         montar_pacote(12, PGM_ID, modulos[modulo_index].UID0, modulos[modulo_index].UID1,
-                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T', 0x01,
+                modulos[modulo_index].UID2, modulos[modulo_index].UID3, 'T',
                 0x00, Buffer_TX);
 
         estado = TRANSMIT;
@@ -481,7 +478,7 @@ void Controle() {
       PGM_cadastrado[i] = false;
     }
 
-	montar_pacote(12, PGM_BROADCAST_ID, 0, 0, 0, 0, 'D', 0x01, 0,
+	montar_pacote(12, PGM_BROADCAST_ID, 0, 0, 0, 0, 'D', 0,
                   Buffer_TX);
 
     estado = TRANSMIT;
